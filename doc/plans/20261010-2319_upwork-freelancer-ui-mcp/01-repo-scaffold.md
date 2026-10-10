@@ -1,7 +1,8 @@
 # 01 — Repo scaffold & toolchain
 
-status: in-progress
+status: done
 parent: `main.md` (20261010-2319_upwork-freelancer-ui-mcp)
+done: 2026-10-10 23:40 (+03) — build 0 warnings, 6/6 tests green, lint clean, smoke-tested healthz; docker build verified
 
 ## Scope (single session)
 - Root: `package.json` (npm workspaces `server`+`web`, scripts, engines), `tsconfig.base.json`,
@@ -26,6 +27,8 @@ Owner auth, Upwork OAuth, tool proxy, real feature pages, static SPA serving by 
 
 ## Decisions
 - TS 5.9.3 over 7.0.2: typescript-eslint 8.71.1 peer range `>=4.8.4 <6.1.0` (npm registry).
+- npm 11.19 `allowScripts`: approved `esbuild` postinstall (required by Vite) — recorded here per
+  "no dependency/script changes silently".
 - ESLint 10.12.0 + @eslint/js 10.0.1 + typescript-eslint 8.71.1 (peer allows eslint ^10).
 - better-sqlite3 NOT added yet — lands with plan 02/03 when storage is actually used.
 - `concurrently` for parallel dev (server+web) — small, standard tooling.

@@ -110,7 +110,7 @@ Hono BFF (Node 26, TS strict)
 
 | # | Plan | Status |
 |---|------|--------|
-| 01 | `01-repo-scaffold.md` — configs, README, .gitignore, workspaces, toolchain, Docker, minimal health endpoint | in-progress |
+| 01 | `01-repo-scaffold.md` — configs, README, .gitignore, workspaces, toolchain, Docker, minimal health endpoint | done |
 | 02 | `02-backend-core.md` — owner auth (login/session), config hardening, static SPA serving, error envelope | proposed |
 | 03 | `03-upwork-oauth-connection.md` — MCP OAuth 2.1 flow, encrypted token store, re-auth detection & status API | proposed |
 | 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | proposed |
