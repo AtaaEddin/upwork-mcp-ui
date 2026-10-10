@@ -1,0 +1,32 @@
+{
+  "name": "upwork-mcp-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted freelancer-side Upwork UI built on the official Upwork MCP server",
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c green,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w server && npm run build -w web",
+    "test": "npm run test -w server -w web --if-present",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.12.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

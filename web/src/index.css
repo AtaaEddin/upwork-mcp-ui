@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Upwork design tokens — sampled from live upwork.com CSS (Oct 2026).
+   Keep in sync with AGENTS.md → "Design system". */
+@theme {
+  --color-up-green: #14a800;
+  --color-up-green-dark: #3c8224;
+  --color-up-green-hc: #0c5c00;
+  --color-up-lime: #95df00;
+  --color-up-black: #181818;
+  --color-up-teal: #13544e;
+  --color-up-red: #c70e05;
+  --color-up-sky: #5cf5ff;
+  --color-up-yellow: #d9c407;
+  --color-up-surface: #f7faf7;
+  --color-up-surface-2: #f2f7f2;
+  --color-up-border: #e4ebe4;
+  --font-sans: "Neue Montreal", "Upwork Neue Montreal", system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-up-surface font-sans text-up-black antialiased;
+}
+
+.dark body {
+  @apply bg-up-black text-white;
+}

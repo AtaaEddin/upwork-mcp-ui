@@ -1,0 +1,15 @@
+services:
+  upwork-mcp-ui:
+    build: .
+    image: upwork-mcp-ui:latest
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      APP_SECRET: ${APP_SECRET:-}
+      DATA_DIR: /data
+    volumes:
+      - upwork-data:/data
+    restart: unless-stopped
+
+volumes:
+  upwork-data:

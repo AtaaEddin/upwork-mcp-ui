@@ -1,0 +1,95 @@
+# Upwork MCP UI
+
+Self-hosted, **freelancer-side** Upwork web UI built on the **official Upwork MCP server**
+(`https://mcp.upwork.com/mcp`).
+
+The backend is a headless [MCP](https://modelcontextprotocol.io) client (JSON-RPC over
+Streamable HTTP, OAuth 2.1) that exposes the Upwork MCP tools through a small REST API
+consumed by a React single-page app. **No LLM is involved** — MCP is a tool protocol; the UI
+calls the tools directly.
+
+> **Unofficial.** Upwork® is a trademark of Upwork Global LLC. Use of the Upwork MCP is
+> subject to Upwork's API & MCP Terms of Use. Freelancer actions only, on your own account.
+
+## Features (roadmap)
+
+- [x] Repo scaffold, toolchain, Docker (plan 01)
+- [ ] Owner login, single-user session (plan 02)
+- [ ] One-click Upwork sign-in (OAuth 2.1) + **re-auth banner** when the connection expires
+      (plans 03, 05)
+- [ ] **Every MCP tool reachable** via a generic tool API + tools console (plan 04)
+- [ ] Freelancer dashboard: invitations, offers, messages, matched jobs, Connects balance
+      (plan 06)
+- [ ] Job search & detail (plan 06)
+- [ ] Proposals with draft-confirm, invitations/offers, messages, contracts, earnings,
+      profile (plan 07)
+- [ ] Design matching upwork.com (green `#14a800` system, light + dark themes) (plan 05)
+
+See [`doc/plans/`](doc/plans/) for the full plan system and
+[`AGENTS.md`](AGENTS.md) for contributor/agent rules.
+
+## Architecture
+
+```
+Browser (React 19 SPA, Tailwind 4)
+   │  one origin, port 8787
+   ▼
+Hono BFF (Node 26, TypeScript strict)
+   ├─ owner login (password → httpOnly session cookie)
+   ├─ /api/upwork/*  → OAuth 2.1 (code + PKCE + DCR) to the Upwork MCP server
+   ├─ /api/tools, /api/tools/:name/call → MCP Streamable HTTP (JSON-RPC)
+   │     └─ @modelcontextprotocol/client v2; tokens in SQLite (AES-256-GCM)
+   └─ serves the built SPA (web/dist)
+```
+
+- One Docker container, one port, one SQLite file in a volume — built for low-power
+  self-hosting. No Redis/queues/Postgres.
+- **Re-auth**: the UI polls `/api/upwork/status`; a sticky banner appears whenever the
+  Upwork connection needs re-auth, with a one-click reconnect.
+- **All tools**: curated pages cover the main flows; everything else the MCP server offers
+  is reachable through the tools console.
+
+## Quickstart (development)
+
+Requires Node.js ≥ 24 and npm ≥ 11.
+
+```bash
+cp .env.example .env
+npm install
+npm run dev        # server :8787 + web :5173 (proxies /api → :8787)
+```
+
+- Web UI: http://localhost:5173
+- Health: http://localhost:8787/api/healthz
+
+## Docker
+
+```bash
+cp .env.example .env     # set APP_SECRET: openssl rand -hex 32
+docker compose up --build -d
+# → http://localhost:8787
+```
+
+## Environment variables
+
+| Var | Default | Description |
+|-----|---------|-------------|
+| `PORT` | `8787` | HTTP port (API + built SPA) |
+| `HOST` | `0.0.0.0` | Bind address |
+| `APP_SECRET` | — | **Required in production.** Random 32+ chars; encrypts stored OAuth tokens and signs session cookies |
+| `DATA_DIR` | `./data` | SQLite database location (gitignored, never committed) |
+| `UPWORK_MCP_URL` | `https://mcp.upwork.com/mcp` | Official Upwork MCP endpoint |
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Server + web in watch mode (parallel) |
+| `npm run build` | Build server (`server/dist`) and web (`web/dist`) |
+| `npm test` | Run Vitest suites |
+| `npm run lint` | ESLint (zero warnings) |
+| `npm run typecheck` | `tsc --noEmit` for both workspaces |
+
+## License
+
+[MIT](./LICENSE)

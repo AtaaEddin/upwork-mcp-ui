@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local env & secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Runtime data (SQLite DB with encrypted tokens — never commit)
+data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test output
+coverage/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.local
