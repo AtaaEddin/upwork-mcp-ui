@@ -43,7 +43,13 @@ export type AppConfig = z.infer<typeof EnvSchema>;
  * Throws (zod error / Error) on invalid values — fail fast at boot.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const cfg = EnvSchema.parse(env);
+  // Docker compose passes every listed env var — including empty ones. Treat
+  // "" as unset so pass-through with defaults works (plan 09).
+  const effective: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== '') effective[key] = value;
+  }
+  const cfg = EnvSchema.parse(effective);
   if (cfg.NODE_ENV === 'production' && !cfg.APP_SECRET) {
     throw new Error('APP_SECRET (32+ chars) is required when NODE_ENV=production');
   }

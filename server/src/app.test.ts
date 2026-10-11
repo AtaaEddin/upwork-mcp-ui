@@ -356,4 +356,19 @@ describe('loadConfig', () => {
   it('enforces SESSION_TTL_MS sanity', () => {
     expect(() => loadConfig({ SESSION_TTL_MS: '-5' } as NodeJS.ProcessEnv)).toThrow();
   });
+
+  it('treats empty env values as unset (compose passes listed vars even when empty)', () => {
+    const cfg = loadConfig({
+      NODE_ENV: 'production',
+      APP_SECRET: 'a'.repeat(32),
+      OWNER_PASSWORD: '',
+      SESSION_TTL_MS: '',
+      UPWORK_KEEPALIVE_MS: '',
+      PUBLIC_BASE_URL: '',
+    } as NodeJS.ProcessEnv);
+    expect(cfg.OWNER_PASSWORD).toBeUndefined();
+    expect(cfg.SESSION_TTL_MS).toBe(7 * 24 * 60 * 60 * 1000);
+    expect(cfg.UPWORK_KEEPALIVE_MS).toBe(300_000);
+    expect(cfg.PUBLIC_BASE_URL).toBeUndefined();
+  });
 });

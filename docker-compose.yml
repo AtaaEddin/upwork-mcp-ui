@@ -2,13 +2,32 @@ services:
   upwork-mcp-ui:
     build: .
     image: upwork-mcp-ui:latest
+    # Local health checks only — public access goes through the Cloudflare
+    # tunnel (plan 09). 8787 is never exposed to the network.
     ports:
-      - "${PORT:-8787}:8787"
+      - "127.0.0.1:${PORT:-8787}:8787"
     environment:
       APP_SECRET: ${APP_SECRET:-}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      UPWORK_MCP_URL: ${UPWORK_MCP_URL:-https://mcp.upwork.com/mcp}
+      UPWORK_KEEPALIVE_MS: ${UPWORK_KEEPALIVE_MS:-300000}
+      SESSION_TTL_MS: ${SESSION_TTL_MS:-}
       DATA_DIR: /data
     volumes:
       - upwork-data:/data
+    restart: unless-stopped
+
+  # Cloudflare Tunnel (plan 09): outbound-only connection from the Pi to
+  # Cloudflare; the public hostname (upwork-mcp.ataadevs.net) is mapped to the
+  # app in the Cloudflare dashboard. Active when COMPOSE_PROFILES includes
+  # `tunnel` (the Pi .env sets it — see scripts/pi/install.sh).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    profiles: ["tunnel"]
+    depends_on:
+      - upwork-mcp-ui
     restart: unless-stopped
 
 volumes:
