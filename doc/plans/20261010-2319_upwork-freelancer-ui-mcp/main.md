@@ -113,7 +113,7 @@ Hono BFF (Node 26, TS strict)
 | 01 | `01-repo-scaffold.md` — configs, README, .gitignore, workspaces, toolchain, Docker, minimal health endpoint | done |
 | 02 | `02-backend-core.md` — owner auth (login/session), config hardening, static SPA serving, error envelope | done |
 | 03 | `03-upwork-oauth-connection.md` — MCP OAuth 2.1 flow, encrypted token store, re-auth detection & status API | done |
-| 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | proposed |
+| 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | done |
 | 05 | `05-frontend-shell.md` — React+Tailwind shell, Upwork design tokens, layout, login page, re-auth banner | done |
 | 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | proposed |
 | 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | proposed |
@@ -121,4 +121,6 @@ Hono BFF (Node 26, TS strict)
 
 ## Tool discovery log (filled after first authenticated connection — plan 04)
 
-- (pending)
+- (pending the owner's first **real** authenticated connection — the fake-server
+  browser verification is not a source; plan 04 ships the console so this gets
+  filled from the live `tools/list` the first time the owner connects)
