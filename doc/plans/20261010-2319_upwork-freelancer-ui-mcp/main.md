@@ -115,7 +115,7 @@ Hono BFF (Node 26, TS strict)
 | 03 | `03-upwork-oauth-connection.md` — MCP OAuth 2.1 flow, encrypted token store, re-auth detection & status API | done |
 | 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | done |
 | 05 | `05-frontend-shell.md` — React+Tailwind shell, Upwork design tokens, layout, login page, re-auth banner | done |
-| 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | in-progress |
+| 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | done |
 | 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | proposed |
 | 08 | `08-deploy-hardening.md` — image size, backups, smoke tests, final docs | proposed |
 
@@ -124,3 +124,6 @@ Hono BFF (Node 26, TS strict)
 - (pending the owner's first **real** authenticated connection — the fake-server
   browser verification is not a source; plan 04 ships the console so this gets
   filled from the live `tools/list` the first time the owner connects)
+- **Favorites gap (plan 06):** no saved-jobs tool appears in any public tool list
+  (checked Oct 2026) — the favorites toggle is out of the UI; wire it if the live
+  list surfaces a saved-jobs tool.

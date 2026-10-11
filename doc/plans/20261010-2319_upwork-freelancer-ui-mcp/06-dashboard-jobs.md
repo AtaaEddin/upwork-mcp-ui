@@ -1,6 +1,6 @@
 # 06 — Freelancer dashboard + job search/detail
 
-status: in-progress
+status: done
 parent: `main.md` (depends on 04 tool discovery log)
 
 ## Scope
@@ -104,3 +104,57 @@ skill: "pass `org_uid` on every subsequent tool call"). New:
 - Browser-verified mobile+desktop, light+dark, with real (authenticated) data where
   available; empty state verified
 - DoD: build 0 warnings, tests green, lint clean
+
+## Result (2026-10-11)
+
+**Server**
+- `server/src/upwork/account.ts`: `UpworkAccountStore` (SQLite, single row id=1) +
+  `UpworkAccountService` — bootstrap via internal `upwork__list_accounts` through
+  `connection.withClient` (never the generic tool API, so bootstraps don't pollute
+  the console's recent-calls log), preference TALENT → FL_AGENCY → any
+  non-suspended; `get({refresh})`, `select(orgUid)` (400 unknown/missing, 409 while
+  disconnected), `clear()`; `parseUpworkAccounts`/`pickAccount` defensive.
+- `GET /api/upwork/account` (+ `?refresh=1`) and `PUT /api/upwork/account` in
+  `upwork/routes.ts`; migration `004_upwork_account`; the selection is cleared on
+  disconnect via the service's new `onDisconnected` hook (D6.2).
+
+**Client**
+- `web/src/lib/registry.ts` (D6.1): 7 features → documented candidate tool names +
+  nested `action`; `resolveTool` against the live `tools/list`; `callFeature`
+  injects `action` + `org_uid` into `POST /api/tools/:name/call`; `parseToolData`
+  (`structuredContent` else JSON text, else raw text).
+- `web/src/lib/jobs.ts`: `find_jobs` arg builders + defensive result mappers
+  (rows/detail/meta; pass-through pagination echo; surfaces `empty_reason` /
+  `filters_ignored` / `needs_details` / `suggested_next_step` / `total`);
+  `web/src/lib/rows.ts`: generic list + Connects-balance mappers.
+- `useFeature` (idle/pending/unavailable/error/ok + retry; `toolsLoading`
+  disambiguates "list still loading" from "tool absent"), `useToolList`,
+  `AccountProvider` (bootstrap once connected, reset on disconnect, `select`),
+  `FeatureCard`, shared `NotConnectedCta`.
+- Pages: Dashboard (5 independent cards + account picker), Find jobs (matched view
+  first; search form; pass-through pagination; feedback notes; row → detail link),
+  Job detail (meta grid, description, requirements, skills, raw JSON, apply panel
+  with Connects cost → `/jobs/:jobKey/propose` placeholder for plan 07).
+
+**Tests** (all in the change)
+- Server 11 (account bootstrap/select/refresh/400/409/clear-on-disconnect +
+  pickAccount/parse fixtures); client: registry, jobs mapper, rows, `useFeature`,
+  `AccountProvider`, DashboardPage, JobsPage, JobDetailPage, ProposalDraftPage +
+  App/ToolsPage adjustments. Suite: 92/92 server, 107/107 web.
+- Fixed 3 pre-existing flaky instant assertions in `ToolsPage.test.tsx`
+  (`findBy`/`waitFor`) — no behavior change.
+
+**Browser verification (D6.4)**
+- `web/scripts/browser-verify-connected.mjs`: serves the built SPA from a fake
+  "connected" `/api` backend (deterministic, no PII) and drives the system
+  Chromium — 11 shots (`p06-{dashboard,jobs,job-detail}-{desktop,mobile}-{light,dark}`
+  + `p06-dashboard-desktop-light-degraded`) with content assertions (card grid, job
+  rows, Connects balance/cost, apply CTA), dark-class check, uncaught-error
+  tracking, and a per-card degradation check (forced `list_offers` failure → only
+  that card errors with Retry; siblings stay healthy). All pass.
+- Real-data check: pending the owner's first real connection — closes together with
+  the discovery log; correct any registry name drift then.
+
+**Gap (recorded in main.md)**
+- Favorites toggle: no saved-jobs tool in any public tool list — out; wire it if
+  the discovery log surfaces such a tool.
