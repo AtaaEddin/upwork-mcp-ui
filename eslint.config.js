@@ -21,4 +21,19 @@ export default tseslint.config(
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Node dev-time scripts (e.g. web/scripts/browser-verify.mjs): declare the
+    // globals they reference — no `globals` package dependency for this.
+    // (`location` appears inside page-evaluation callbacks that run in the
+    // browser context.)
+    files: ['web/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        location: 'readonly',
+      },
+    },
+  },
 );

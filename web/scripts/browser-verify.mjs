@@ -100,7 +100,7 @@ if (BANNER_SHOTS) {
     await page.waitForSelector('input[type=password]', { timeout: 15_000 });
     await page.type('input[type=password]', PASSWORD);
     await page.click('button[type=submit]');
-    await page.waitForFunction(() => window.location.pathname === '/', { timeout: 15_000 });
+    await page.waitForFunction(() => location.pathname === '/', { timeout: 15_000 });
 
     await shot(page, '03-dashboard-desktop-light', 'h1');
     await page.goto(`${BASE}/?theme=dark`, { waitUntil: 'networkidle0' });
