@@ -8,14 +8,14 @@ import { ToolsPage } from './pages/ToolsPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { JobsPage } from './pages/JobsPage.js';
 import { JobDetailPage } from './pages/JobDetailPage.js';
+import { ProposalsPage } from './pages/ProposalsPage.js';
+import { ProposalDraftPage } from './pages/ProposalDraftPage.js';
 import {
   ContractsPage,
   InvitationsPage,
   MessagesPage,
   NotFoundPage,
   ProfilePage,
-  ProposalDraftPage,
-  ProposalsPage,
 } from './pages/sections.js';
 
 export default function App() {

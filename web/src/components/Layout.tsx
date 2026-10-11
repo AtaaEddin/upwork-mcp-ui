@@ -3,6 +3,7 @@ import { useAuth } from '../context/auth.js';
 import { useUpworkStatus } from '../hooks/useUpworkStatus.js';
 import { ReAuthBanner } from './ReAuthBanner.js';
 import { TopNav } from './TopNav.js';
+import { ToastHost } from './Toast.js';
 
 /**
  * Authenticated shell: re-auth banner (plan 03 contract) + sticky nav on top,
@@ -27,6 +28,8 @@ export function Layout() {
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
+      {/* Result toasts for write actions (plan 07, D7.4). */}
+      <ToastHost />
       <footer className="border-t border-up-border bg-white py-4 dark:border-white/10 dark:bg-up-black">
         <p className="mx-auto w-full max-w-6xl px-4 text-center text-xs text-up-black/50 dark:text-white/50">
           Unofficial freelancer UI for the official Upwork MCP server · Upwork® is a trademark of

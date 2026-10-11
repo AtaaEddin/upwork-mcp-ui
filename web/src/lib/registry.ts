@@ -35,6 +35,27 @@ export const FEATURES = {
     tools: ['upwork__list_freelancer_proposals'],
     action: 'invitations',
   },
+  proposalsList: {
+    key: 'proposals.list',
+    tools: ['upwork__list_freelancer_proposals'],
+    action: 'list',
+  },
+  proposalsGet: {
+    key: 'proposals.get',
+    tools: ['upwork__list_freelancer_proposals'],
+    action: 'get',
+  },
+  /** `manage_proposals` action `create` — returns the preview (plan 07a). */
+  manageProposalsCreate: {
+    key: 'proposals.create',
+    tools: ['upwork__manage_proposals'],
+    action: 'create',
+  },
+  /** `confirm_preview` action `confirm` — the submit step (plan 07a). */
+  confirmPreview: { key: 'proposals.confirm', tools: ['upwork__confirm_preview'], action: 'confirm' },
+  profileGet: { key: 'profile.get', tools: ['upwork__get_profile'], action: 'get' },
+  /** Portfolio projects + certificates (TALENT) for proposal highlights. */
+  profileHighlights: { key: 'profile.highlights', tools: ['upwork__get_profile'], action: 'list_highlights' },
   offers: { key: 'offers.list', tools: ['upwork__list_offers'], action: 'list_mine' },
   rooms: { key: 'messages.rooms', tools: ['upwork__get_messages'], action: 'list_rooms' },
   connects: { key: 'profile.connects', tools: ['upwork__get_profile'], action: 'connects_balance' },
