@@ -70,25 +70,6 @@ docker compose up --build -d
 # → http://localhost:8787
 ```
 
-## Raspberry Pi deployment (plan 09)
-
-For a Raspberry Pi 4 (64-bit Raspberry Pi OS) behind a dynamic public IP, the app is
-exposed through a **Cloudflare Tunnel** (named tunnel, TLS at the Cloudflare edge) — no
-router port forwarding or DDNS needed.
-
-1. Create a tunnel + public hostname in the Cloudflare dashboard (Networking → Tunnels)
-   and copy the tunnel token.
-2. On the Pi:
-
-   ```bash
-   bash scripts/pi/install.sh   # installs Docker if missing, generates .env + secrets, builds & starts
-   bash scripts/pi/status.sh    # containers, reachability, disk, memory
-   ```
-
-`install.sh` is idempotent (never regenerates existing secrets) and prints the generated
-`OWNER_PASSWORD` once. Details, acceptance steps, and a documented fallback (Caddy + DDNS):
-[plan 09](doc/plans/20261010-2319_upwork-freelancer-ui-mcp/09-pi-deployment.md).
-
 ## Environment variables
 
 | Var | Default | Description |
@@ -103,8 +84,6 @@ router port forwarding or DDNS needed.
 | `UPWORK_MCP_URL` | `https://mcp.upwork.com/mcp` | Official Upwork MCP endpoint |
 | `PUBLIC_BASE_URL` | `http://localhost:PORT` | Public origin (no trailing slash); OAuth redirect base |
 | `UPWORK_KEEPALIVE_MS` | `300000` | Upwork keepalive ping interval in ms (clamped 5 s – 1 h) |
-| `CLOUDFLARE_TUNNEL_TOKEN` | — | Cloudflare Tunnel token (plan 09). Empty = the tunnel container does not run |
-| `COMPOSE_PROFILES` | — | Compose profiles; `tunnel` activates `cloudflared` (set by the Pi install script) |
 
 ### First run
 

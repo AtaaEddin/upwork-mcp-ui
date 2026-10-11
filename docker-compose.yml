@@ -18,10 +18,11 @@ services:
       - upwork-data:/data
     restart: unless-stopped
 
-  # Cloudflare Tunnel (plan 09): outbound-only connection from the Pi to
-  # Cloudflare; the public hostname (upwork-mcp.ataadevs.net) is mapped to the
-  # app in the Cloudflare dashboard. Active when COMPOSE_PROFILES includes
-  # `tunnel` (the Pi .env sets it — see scripts/pi/install.sh).
+  # Cloudflare Tunnel (plan 09): outbound-only connection from the host (Windows 11
+  # or Raspberry Pi) to Cloudflare; the public hostname (upwork-mcp.ataadevs.net) is
+  # mapped to the app in the Cloudflare dashboard. Active when COMPOSE_PROFILES
+  # includes `tunnel` (the install scripts set it — see scripts/windows/install.ps1
+  # or scripts/pi/install.sh).
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}

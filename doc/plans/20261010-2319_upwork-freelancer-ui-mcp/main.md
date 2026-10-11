@@ -118,7 +118,7 @@ Hono BFF (Node 26, TS strict)
 | 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | done |
 | 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | in-progress (slice 07a) |
 | 08 | `08-deploy-hardening.md` — image size, backups, smoke tests, final docs | proposed |
-| 09 | `09-pi-deployment.md` — Raspberry Pi deploy: bootstrap scripts, Cloudflare tunnel (DDNS/Caddy fallback) | in-progress |
+| 09 | `09-pi-deployment.md` — deploy on Windows 11 (Docker Desktop/WSL2) + Pi alternative, Cloudflare tunnel | in-progress |
 
 ## Tool discovery log (filled after first authenticated connection — plan 04)
 
