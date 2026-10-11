@@ -26,6 +26,30 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    name: '002_upwork_connection',
+    up: (db) => {
+      // Single-row (id = 1) table: one Upwork connection per deployment.
+      // Secrets (OAuth tokens, DCR client info, PKCE verifier, discovery state)
+      // are stored AES-256-GCM encrypted (upwork/crypto.ts), never in plaintext.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS upwork_connection (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          state TEXT NOT NULL DEFAULT 'disconnected',
+          issuer TEXT,
+          access_expires_at INTEGER,
+          tokens_enc TEXT,
+          client_info_enc TEXT,
+          verifier_enc TEXT,
+          discovery_enc TEXT,
+          flow_state TEXT,
+          pending_authorize_url TEXT,
+          connected_at INTEGER,
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        )
+      `);
+    },
+  },
 ];
 
 export function openDatabase(dataDir: string): Db {

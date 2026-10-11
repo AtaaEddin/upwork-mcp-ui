@@ -17,6 +17,19 @@ const EnvSchema = z.object({
     .default(7 * 24 * 60 * 60 * 1000),
   DATA_DIR: z.string().min(1).default('./data'),
   UPWORK_MCP_URL: z.url().default('https://mcp.upwork.com/mcp'),
+  /**
+   * Public base URL of this deployment — the origin the user's browser can
+   * reach. Used for the OAuth callback redirect URI registered with Upwork.
+   * Must be set to the public origin in production (not just localhost).
+   */
+  PUBLIC_BASE_URL: z.string().url().optional(),
+  /** Upwork keepalive ping interval (default 5 min, clamped 5 s – 1 h). */
+  UPWORK_KEEPALIVE_MS: z.coerce
+    .number()
+    .int()
+    .min(5_000)
+    .max(3_600_000)
+    .default(300_000),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

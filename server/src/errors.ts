@@ -6,6 +6,7 @@ export type ErrorCode =
   | 'method_not_allowed'
   | 'conflict'
   | 'rate_limited'
+  | 'upstream_error'
   | 'internal_error';
 
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
@@ -16,6 +17,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   method_not_allowed: 405,
   conflict: 409,
   rate_limited: 429,
+  upstream_error: 502,
   internal_error: 500,
 };
 

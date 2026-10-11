@@ -7,6 +7,8 @@ import { AppError, errorBody } from './errors.js';
 import type { RateLimiter } from './rate-limit.js';
 import type { SessionService } from './sessions.js';
 import { createSpaMiddleware } from './static.js';
+import { createUpworkRoutes } from './upwork/routes.js';
+import type { UpworkConnectionService } from './upwork/service.js';
 
 export const SESSION_COOKIE = 'session';
 
@@ -21,6 +23,8 @@ export interface AppDeps {
   loginLimiter: RateLimiter;
   /** Directory containing the built SPA (web/dist). Omit in dev (Vite serves it). */
   staticDir?: string;
+  /** Upwork connection service (plan 03). Omitted ⇒ no /api/upwork routes. */
+  upwork?: UpworkConnectionService;
 }
 
 type AppEnv = { Variables: { userId: number } };
@@ -32,6 +36,8 @@ const PUBLIC_API: Array<[method: string, path: string]> = [
   ['POST', '/api/setup'],
   ['POST', '/api/login'],
   ['POST', '/api/logout'],
+  // The browser lands here from the Upwork authorization server with no session cookie.
+  ['GET', '/api/upwork/callback'],
 ];
 
 /** Known paths → allowed methods, used to answer 405 with the error envelope. */
@@ -41,6 +47,10 @@ const KNOWN_METHODS: Record<string, string[]> = {
   '/api/login': ['POST'],
   '/api/logout': ['POST'],
   '/api/me': ['GET'],
+  '/api/upwork/connect': ['POST'],
+  '/api/upwork/callback': ['GET'],
+  '/api/upwork/status': ['GET'],
+  '/api/upwork/disconnect': ['POST'],
 };
 
 /**
@@ -74,6 +84,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   if (deps.staticDir) app.use('*', createSpaMiddleware(deps.staticDir));
 
   // Auth guard: every non-public /api route requires a valid session.
+  // (Registered before the /api/upwork sub-app so its routes are guarded too.)
   app.use('/api/*', (c, next) => {
     if (PUBLIC_API.some(([m, p]) => m === c.req.method && p === c.req.path)) return next();
     const userId = sessions.touch(cookies(c)[SESSION_COOKIE]);
@@ -81,6 +92,8 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
     c.set('userId', userId);
     return next();
   });
+
+  if (deps.upwork) app.route('/api/upwork', createUpworkRoutes(deps.upwork));
 
   app.get('/api/healthz', (c) =>
     c.json({
