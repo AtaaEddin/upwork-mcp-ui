@@ -44,6 +44,11 @@ export interface UpworkServiceOptions {
   failureThreshold?: number;
   now?: () => number;
   log?: (message: string) => void;
+  /**
+   * Fired after a user-initiated disconnect completes (plan 06: drop the
+   * selected-account row — it can never outlive the connection).
+   */
+  onDisconnected?: () => void;
 }
 
 export interface StartConnectResult {
@@ -214,6 +219,7 @@ export class UpworkConnectionService {
       this.store.clearTokens();
       this.store.clearFlow();
       this.store.set({ state: 'disconnected' });
+      this.opts.onDisconnected?.();
       this.opts.log?.('upwork connection disconnected by user');
     });
   }

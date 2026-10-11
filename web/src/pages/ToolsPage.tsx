@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { NotConnectedCta } from '../components/NotConnectedCta.js';
 import { apiFetch, ApiError } from '../lib/api.js';
 import { useUpworkStatus } from '../hooks/useUpworkStatus.js';
-import type { UpworkConnectionState } from '../lib/upwork.js';
-import { connectToUpwork } from '../lib/upwork.js';
 import {
   buildArgsSkeleton,
   buildCurlCommand,
@@ -166,7 +165,7 @@ export function ToolsPage() {
   }, [curlCommand]);
 
   if (connected === false) {
-    return <NotConnectedCta state={status.state} />;
+    return <NotConnectedCta title="Tools console" state={status.state} />;
   }
 
   return (
@@ -374,58 +373,6 @@ export function ToolsPage() {
             </table>
           </div>
         </section>
-      )}
-    </div>
-  );
-}
-
-function NotConnectedCta({ state }: { state: UpworkConnectionState | 'unknown' }) {
-  const [connecting, setConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-
-  const startConnect = useCallback(async (): Promise<void> => {
-    setConnecting(true);
-    setConnectError(null);
-    try {
-      await connectToUpwork();
-    } catch (err) {
-      setConnectError(err instanceof Error ? err.message : 'Could not start the Upwork connection.');
-    } finally {
-      setConnecting(false);
-    }
-  }, []);
-
-  const message =
-    state === 'needs_reauth'
-      ? 'Your Upwork connection expired. Reconnect to load the tools console.'
-      : state === 'disconnected'
-        ? 'You are not connected to Upwork. Connect to load the tools console.'
-        : state === 'connecting'
-          ? 'Connecting to Upwork… the console loads as soon as the connection completes.'
-          : 'Checking your Upwork connection…';
-
-  return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-up-border bg-white px-6 py-20 text-center dark:border-white/15 dark:bg-white/5">
-      <h1 className="text-lg font-semibold text-up-black dark:text-white">Tools console</h1>
-      <p className="mt-2 max-w-md text-sm text-up-black/60 dark:text-white/60">{message}</p>
-      {state === 'disconnected' || state === 'needs_reauth' ? (
-        <div className="mt-6 flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void startConnect()}
-            disabled={connecting}
-            className="rounded-md bg-up-green px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-up-green-dark disabled:opacity-50"
-          >
-            {connecting ? 'Starting…' : 'Connect to Upwork'}
-          </button>
-          {connectError !== null && (
-            <p role="alert" className="text-xs text-up-red">
-              {connectError}
-            </p>
-          )}
-        </div>
-      ) : (
-        <span className="mt-6 text-xs text-up-black/50 dark:text-white/50">Please wait…</span>
       )}
     </div>
   );

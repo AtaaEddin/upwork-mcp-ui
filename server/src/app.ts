@@ -10,6 +10,7 @@ import { createToolRoutes } from './tools/routes.js';
 import type { ToolService } from './tools/service.js';
 import type { ToolCallLog } from './tools/store.js';
 import { createSpaMiddleware } from './static.js';
+import type { UpworkAccountService } from './upwork/account.js';
 import { createUpworkRoutes } from './upwork/routes.js';
 import type { UpworkConnectionService } from './upwork/service.js';
 
@@ -28,6 +29,8 @@ export interface AppDeps {
   staticDir?: string;
   /** Upwork connection service (plan 03). Omitted ⇒ no /api/upwork routes. */
   upwork?: UpworkConnectionService;
+  /** Selected-account service (plan 06). Omitted ⇒ no /api/upwork/account. */
+  upworkAccount?: UpworkAccountService;
   /** Tool proxy service + call log (plan 04). Omitted ⇒ no /api/tools routes. */
   tools?: ToolService;
   toolLog?: ToolCallLog;
@@ -57,6 +60,7 @@ const KNOWN_METHODS: Record<string, string[]> = {
   '/api/upwork/callback': ['GET'],
   '/api/upwork/status': ['GET'],
   '/api/upwork/disconnect': ['POST'],
+  '/api/upwork/account': ['GET', 'PUT'],
   '/api/tools': ['GET'],
   '/api/tools/calls': ['GET'],
 };
@@ -101,7 +105,9 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
     return next();
   });
 
-  if (deps.upwork) app.route('/api/upwork', createUpworkRoutes(deps.upwork));
+  if (deps.upwork) {
+    app.route('/api/upwork', createUpworkRoutes(deps.upwork, deps.upworkAccount));
+  }
   if (deps.tools && deps.toolLog) {
     app.route('/api', createToolRoutes({ service: deps.tools, log: deps.toolLog }));
   }

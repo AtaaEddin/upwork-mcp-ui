@@ -64,7 +64,9 @@ describe('ToolsPage', () => {
     expect(screen.getByText(/2 tools/)).toBeInTheDocument();
     // Recent calls table renders from GET /api/tools/calls
     expect(screen.getByText('Recent calls')).toBeInTheDocument();
-    expect(screen.getAllByText('upwork__get_account').length).toBeGreaterThanOrEqual(3);
+    await waitFor(() =>
+      expect(screen.getAllByText('upwork__get_account').length).toBeGreaterThanOrEqual(3),
+    );
   });
 
   it('filters tools by search query', async () => {
@@ -95,10 +97,10 @@ describe('ToolsPage', () => {
     await screen.findAllByText('upwork__get_account');
 
     // Wait for the args skeleton (derived from inputSchema) to render.
-    const argsBox = screen.getByRole('textbox') as HTMLTextAreaElement;
+    const argsBox = (await screen.findByRole('textbox')) as HTMLTextAreaElement;
     await waitFor(() => expect(JSON.parse(argsBox.value)).toEqual({ action: '' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Call tool' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Call tool' }));
 
     expect(await screen.findByText('hello from tool')).toBeInTheDocument();
     expect(screen.getByText('Success')).toBeInTheDocument();
@@ -126,7 +128,7 @@ describe('ToolsPage', () => {
     renderPage(fetchImpl);
     await screen.findAllByText('upwork__get_account');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Call tool' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Call tool' }));
     expect(await screen.findByText(/args\.action is required/i)).toBeInTheDocument();
   });
 
@@ -143,7 +145,7 @@ describe('ToolsPage', () => {
     renderPage(fetchImpl);
     await screen.findAllByText('upwork__get_account');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Call tool' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Call tool' }));
     expect(await screen.findByText(/rate limit.*about 30s/i)).toBeInTheDocument();
   });
 

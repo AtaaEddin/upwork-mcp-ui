@@ -70,6 +70,24 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    name: '004_upwork_account',
+    up: (db) => {
+      // Selected Upwork account (plan 06): the org_uid every tool call must
+      // carry, plus display fields. Display-only data, never secrets.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS upwork_account (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          org_uid TEXT NOT NULL,
+          name TEXT NOT NULL,
+          role TEXT NOT NULL,
+          role_label TEXT,
+          suspended INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        )
+      `);
+    },
+  },
 ];
 
 export function openDatabase(dataDir: string): Db {

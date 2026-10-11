@@ -8,6 +8,7 @@ import { RateLimiter } from './rate-limit.js';
 import { SessionService } from './sessions.js';
 import { ToolService } from './tools/service.js';
 import { ToolCallLog } from './tools/store.js';
+import { UpworkAccountService } from './upwork/account.js';
 import { UpworkConnectionService } from './upwork/service.js';
 
 const config = loadConfig();
@@ -23,8 +24,13 @@ const upwork = new UpworkConnectionService({
   db,
   config,
   redirectUri: `${publicBase.replace(/\/+$/, '')}/api/upwork/callback`,
+  // Plan 06: the selected account can never outlive the connection.
+  onDisconnected: () => upworkAccount.clear(),
 });
 upwork.start();
+
+// Plan 06: selected-account persistence (org_uid for every tool call).
+const upworkAccount = new UpworkAccountService({ connection: upwork, db });
 
 // Plan 04: tool proxy (ALL tools) + call log.
 const toolLog = new ToolCallLog(db);
@@ -41,6 +47,7 @@ const app = createApp({
   sessions,
   loginLimiter,
   upwork,
+  upworkAccount,
   tools,
   toolLog,
   // Resolves to <repo>/web/dist from both server/src (tsx dev) and server/dist (node).

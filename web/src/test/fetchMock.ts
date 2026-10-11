@@ -11,7 +11,7 @@ export function jsonResponse(
   });
 }
 
-export type FetchRoute = (req: Request) => Response;
+export type FetchRoute = (req: Request) => Response | Promise<Response>;
 
 /**
  * vi.fn fetch stub routed by URL pathname; unmatched paths get the server

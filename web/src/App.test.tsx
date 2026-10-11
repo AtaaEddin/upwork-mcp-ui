@@ -71,10 +71,10 @@ describe('App (routing + guard + layout)', () => {
     expect(screen.getByRole('button', { name: /reconnect to upwork/i })).toBeInTheDocument();
   });
 
-  it('deep links render their placeholder sections', async () => {
+  it('deep links render their sections (jobs shows its connect CTA without a connection)', async () => {
     renderApp({ '/api/me': me200, '/api/upwork/status': status404 }, ['/jobs']);
     expect(await screen.findByRole('heading', { name: 'Find jobs' })).toBeInTheDocument();
-    expect(screen.getByText('Arriving in plan 06')).toBeInTheDocument();
+    expect(screen.getByText(/Checking your Upwork connection/i)).toBeInTheDocument();
   });
 
   it('unknown routes render the 404 page', async () => {
