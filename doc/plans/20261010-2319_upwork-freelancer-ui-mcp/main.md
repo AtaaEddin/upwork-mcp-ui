@@ -114,7 +114,7 @@ Hono BFF (Node 26, TS strict)
 | 02 | `02-backend-core.md` — owner auth (login/session), config hardening, static SPA serving, error envelope | done |
 | 03 | `03-upwork-oauth-connection.md` — MCP OAuth 2.1 flow, encrypted token store, re-auth detection & status API | proposed |
 | 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | proposed |
-| 05 | `05-frontend-shell.md` — React+Tailwind shell, Upwork design tokens, layout, login page, re-auth banner | proposed |
+| 05 | `05-frontend-shell.md` — React+Tailwind shell, Upwork design tokens, layout, login page, re-auth banner | done |
 | 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | proposed |
 | 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | proposed |
 | 08 | `08-deploy-hardening.md` — image size, backups, smoke tests, final docs | proposed |
