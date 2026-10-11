@@ -11,9 +11,25 @@ import type { AddressInfo } from 'node:net';
  *   (`POST /mcp`, Streamable HTTP: initialize / ping / notifications)
  * - 401 + WWW-Authenticate on /mcp for missing/invalid bearer tokens
  *
- * The "browser" step is simulated by tests calling {@link FakeUpwork.issueCode}
- * and then hitting our callback endpoint with `code` + `state` + `iss`.
+ * The "browser" step can be completed in a real browser via the
+ * auto-approving `GET /authorize` endpoint (302 back with code+state+iss),
+ * or simulated by tests calling {@link FakeUpwork.issueCode} and then
+ * hitting our callback endpoint with `code` + `state` + `iss`.
  */
+/** Behavior of a fake MCP tool for a single call. */
+export type FakeMcpToolBehavior =
+  | { kind: 'ok'; content?: unknown[]; isError?: boolean; delayMs?: number }
+  | { kind: 'rpc_error'; code: number; message: string; delayMs?: number }
+  | { kind: 'http'; status: number; retryAfterSec?: number; delayMs?: number };
+
+export interface FakeMcpTool {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+  /** Per-call behavior (defaults to ok with a `ok` text content). */
+  behavior?: FakeMcpToolBehavior;
+}
+
 export interface FakeUpwork {
   origin: string;
   mcpUrl: string;
@@ -28,7 +44,13 @@ export interface FakeUpwork {
   issuedAccessTokens: string[];
   issuedRefreshTokens: string[];
   lastMcpBearer?: string;
-  mcpStats: { initialize: number; ping: number; other: number; unauthenticated: number };
+  mcpStats: { initialize: number; ping: number; other: number; unauthenticated: number; toolsList: number; toolsCall: number };
+  /** Every `tools/call` received (args as sent — the fake is the upstream). */
+  lastToolCalls: Array<{ name: string; arguments: unknown; at: number }>;
+  /** Add a tool to the fake `tools/list`. */
+  addTool(tool: FakeMcpTool): void;
+  /** Change the per-call behavior of an existing tool. */
+  setToolBehavior(name: string, behavior: FakeMcpToolBehavior): void;
   /** Issue an authorization code (the fake "browser consent" step). */
   issueCode(): string;
   /** Invalidate every access token issued so far (refresh tokens stay valid). */
@@ -42,6 +64,8 @@ export interface FakeUpworkOptions {
   accessTokenTtlSec?: number;
   port?: number;
   host?: string;
+  /** Initial tool list for `tools/list`. */
+  tools?: FakeMcpTool[];
 }
 
 interface JsonRpc {
@@ -62,8 +86,11 @@ export async function startFakeUpwork(opts: FakeUpworkOptions = {}): Promise<Fak
     issuedAccessTokens: [] as string[],
     issuedRefreshTokens: [] as string[],
     lastMcpBearer: undefined as string | undefined,
-    mcpStats: { initialize: 0, ping: 0, other: 0, unauthenticated: 0 },
+    mcpStats: { initialize: 0, ping: 0, other: 0, unauthenticated: 0, toolsList: 0, toolsCall: 0 },
+    lastToolCalls: [] as Array<{ name: string; arguments: unknown; at: number }>,
   };
+  const tools: FakeMcpTool[] = [...(opts.tools ?? [])];
+  const clientRedirectUris = new Map<string, string[]>();
   let failRefreshFlag = false;
   let mcpFailWith: number | undefined;
   let seq = 0;
@@ -102,11 +129,38 @@ export async function startFakeUpwork(opts: FakeUpworkOptions = {}): Promise<Fak
       });
     }
 
+    // Auto-approving authorize endpoint: issues a code and 302s back to the
+    // client — like a consent-free test tenant — so browser-driven flows can
+    // complete the OAuth round-trip without human interaction.
+    if (req.method === 'GET' && url.pathname === '/authorize') {
+      const clientId = url.searchParams.get('client_id');
+      const redirectUri = url.searchParams.get('redirect_uri');
+      const stateParam = url.searchParams.get('state');
+      const allowed = clientId !== null
+        && redirectUri !== null
+        && stateParam !== null
+        && (clientRedirectUris.get(clientId) ?? []).includes(redirectUri);
+      if (!allowed) {
+        return unauthorized(res, origin);
+      }
+      const code = `code-${randomBytes(8).toString('hex')}`;
+      codes.add(code);
+      const target = new URL(redirectUri);
+      target.searchParams.set('code', code);
+      target.searchParams.set('state', stateParam);
+      target.searchParams.set('iss', origin);
+      res.writeHead(302, { location: target.toString() });
+      res.end();
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/register') {
       const body = (await readJson(req)) as { redirect_uris?: string[] };
       state.registerCount += 1;
       const clientId = nextId('client');
       state.registeredClientIds.push(clientId);
+      const redirectUris: string[] = Array.isArray(body.redirect_uris) ? body.redirect_uris : [];
+      clientRedirectUris.set(clientId, redirectUris);
       return json(res, 200, {
         client_id: clientId,
         redirect_uris: body.redirect_uris ?? [],
@@ -204,7 +258,7 @@ export async function startFakeUpwork(opts: FakeUpworkOptions = {}): Promise<Fak
         state.mcpStats.initialize += 1;
         return jsonRpc(res, message, {
           protocolVersion: (message.params as { protocolVersion?: string } | undefined)?.protocolVersion,
-          capabilities: {},
+          capabilities: { tools: { listChanged: false } },
           serverInfo: { name: 'fake-upwork-mcp', version: '1.0.0' },
         });
       }
@@ -212,6 +266,29 @@ export async function startFakeUpwork(opts: FakeUpworkOptions = {}): Promise<Fak
         state.mcpStats.ping += 1;
         jsonRpc(res, message, {});
         return;
+      }
+      if (message.method === 'tools/list') {
+        state.mcpStats.toolsList += 1;
+        return jsonRpc(res, message, {
+          tools: tools.map((t) => ({
+            name: t.name,
+            ...(t.description !== undefined ? { description: t.description } : {}),
+            // The MCP 2026-era Tool schema (validated by the SDK) requires
+            // inputSchema — tools without one get an empty object schema.
+            inputSchema: t.inputSchema ?? { type: 'object' },
+          })),
+        });
+      }
+      if (message.method === 'tools/call') {
+        const params = message.params as { name?: string; arguments?: unknown } | undefined;
+        const name = params?.name ?? '';
+        state.mcpStats.toolsCall += 1;
+        state.lastToolCalls.push({ name, arguments: params?.arguments, at: Date.now() });
+        const tool = tools.find((t) => t.name === name);
+        if (!tool) {
+          return jsonRpcError(res, message, -32602, `unknown tool: ${name}`);
+        }
+        return runToolBehavior(res, message, tool.behavior ?? { kind: 'ok' });
       }
       if (message.id === undefined) {
         // Notification (e.g. notifications/initialized): 202 Accepted, no body.
@@ -277,6 +354,19 @@ export async function startFakeUpwork(opts: FakeUpworkOptions = {}): Promise<Fak
     get mcpStats() {
       return state.mcpStats;
     },
+    get lastToolCalls() {
+      return state.lastToolCalls;
+    },
+    addTool(tool: FakeMcpTool): void {
+      const i = tools.findIndex((t) => t.name === tool.name);
+      if (i >= 0) tools[i] = tool;
+      else tools.push(tool);
+    },
+    setToolBehavior(name: string, behavior: FakeMcpToolBehavior): void {
+      const tool = tools.find((t) => t.name === name);
+      if (!tool) throw new Error(`fake: unknown tool ${name}`);
+      tool.behavior = behavior;
+    },
     issueCode(): string {
       const code = `code-${randomBytes(8).toString('hex')}`;
       codes.add(code);
@@ -302,6 +392,36 @@ function json(res: ServerResponse, status: number, body: unknown): void {
 
 function jsonRpc(res: ServerResponse, message: JsonRpc, result: unknown): void {
   json(res, 200, { jsonrpc: '2.0', id: message.id, result });
+}
+
+function jsonRpcError(res: ServerResponse, message: JsonRpc, code: number, message_: string): void {
+  json(res, 200, { jsonrpc: '2.0', id: message.id, error: { code, message: message_ } });
+}
+
+async function runToolBehavior(
+  res: ServerResponse,
+  message: JsonRpc,
+  behavior: FakeMcpToolBehavior,
+): Promise<void> {
+  if (behavior.delayMs !== undefined && behavior.delayMs > 0) {
+    await new Promise((r) => setTimeout(r, behavior.delayMs));
+  }
+  if (behavior.kind === 'http') {
+    res.writeHead(behavior.status, {
+      'content-type': 'application/json',
+      ...(behavior.retryAfterSec !== undefined ? { 'retry-after': String(behavior.retryAfterSec) } : {}),
+    });
+    res.end(JSON.stringify({ error: 'upstream failure' }));
+    return;
+  }
+  if (behavior.kind === 'rpc_error') {
+    jsonRpcError(res, message, behavior.code, behavior.message);
+    return;
+  }
+  jsonRpc(res, message, {
+    content: behavior.content ?? [{ type: 'text', text: 'ok' }],
+    ...(behavior.isError !== undefined ? { isError: behavior.isError } : {}),
+  });
 }
 
 function unauthorized(res: ServerResponse, origin: string): void {

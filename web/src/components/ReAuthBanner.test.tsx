@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fetchMock, jsonResponse } from '../test/fetchMock.js';
 import { ReAuthBanner } from './ReAuthBanner.js';
 import type { UpworkStatus } from '../lib/upwork.js';
 
@@ -15,19 +16,40 @@ describe('ReAuthBanner', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows on needs_reauth with the reconnect form and dismiss', () => {
+  it('shows on needs_reauth with reconnect button and dismiss', () => {
+    const fetchImpl = fetchMock({
+      '/api/upwork/connect': (req) =>
+        req.method === 'POST'
+          ? jsonResponse({ authorizeUrl: 'http://fake.upwork.local/authorize?state=x' })
+          : jsonResponse({ error: { code: 'method_not_allowed', message: 'no' } }, 405),
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+
     render(<ReAuthBanner status={{ state: 'needs_reauth' }} checkCount={1} />);
     const alert = screen.getByRole('alert');
     expect(alert).toBeInTheDocument();
     expect(screen.getByText(/connection expired/i)).toBeInTheDocument();
-
-    const reconnect = screen.getByRole('button', { name: /reconnect to upwork/i });
-    expect(reconnect).toHaveAttribute('type', 'submit');
-    // Top-level form POST so the OAuth 302 navigates the top window (CORS-safe).
-    const form = reconnect.closest('form');
-    expect(form?.getAttribute('action')).toBe('/api/upwork/connect');
-    expect(form?.getAttribute('method')).toBe('post');
+    expect(screen.getByRole('button', { name: /reconnect to upwork/i })).toHaveAttribute('type', 'button');
     expect(screen.getByRole('button', { name: /dismiss/i })).toHaveAttribute('type', 'button');
+  });
+
+  it('reconnect posts to /api/upwork/connect', async () => {
+    const fetchImpl = fetchMock({
+      '/api/upwork/connect': (req) =>
+        req.method === 'POST'
+          ? jsonResponse({ state: 'connected' }) // no authorizeUrl → no navigation
+          : jsonResponse({ error: { code: 'method_not_allowed', message: 'no' } }, 405),
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+
+    render(<ReAuthBanner status={{ state: 'needs_reauth' }} checkCount={1} />);
+    fireEvent.click(screen.getByRole('button', { name: /reconnect to upwork/i }));
+
+    await waitFor(() =>
+      expect(
+        fetchImpl.mock.calls.some((c) => String(c[0]) === '/api/upwork/connect'),
+      ).toBe(true),
+    );
   });
 
   it('shows on disconnected with the connect message', () => {

@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'conflict'
   | 'rate_limited'
   | 'upstream_error'
+  | 'gateway_timeout'
   | 'internal_error';
 
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
@@ -18,6 +19,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   conflict: 409,
   rate_limited: 429,
   upstream_error: 502,
+  gateway_timeout: 504,
   internal_error: 500,
 };
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { shouldShowReAuthBanner, type UpworkStatus } from '../lib/upwork.js';
+import { useCallback, useEffect, useState } from 'react';
+import { connectToUpwork, shouldShowReAuthBanner, type UpworkStatus } from '../lib/upwork.js';
 import { AlertIcon } from './icons.js';
 
 interface ReAuthBannerProps {
@@ -16,18 +16,33 @@ function bannerMessage(status: UpworkStatus): string {
 
 /**
  * Re-auth notification (plan 05 core requirement). Red sticky strip shown on
- * explicit `needs_reauth`/`disconnected` (never on `unknown`). Reconnect is a
- * top-level form POST to `/api/upwork/connect` (plan 03) so the OAuth 302 to
- * Upwork's authorize URL navigates the top-level window (CORS-safe).
+ * explicit `needs_reauth`/`disconnected` (never on `unknown`). Reconnect
+ * posts to `/api/upwork/connect` (plan 03) and follows the issued authorize
+ * URL in the top-level window — the endpoint answers with JSON
+ * `{ authorizeUrl }`, so the navigation happens client-side.
  */
 export function ReAuthBanner({ status, checkCount }: ReAuthBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   // "Dismiss until next check": every completed status check re-shows the
   // banner if the state still requires action.
   useEffect(() => {
     setDismissed(false);
   }, [checkCount]);
+
+  const startConnect = useCallback(async (): Promise<void> => {
+    setConnecting(true);
+    setConnectError(null);
+    try {
+      await connectToUpwork();
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : 'Could not start the Upwork connection.');
+    } finally {
+      setConnecting(false);
+    }
+  }, []);
 
   if (!shouldShowReAuthBanner(status, dismissed)) return null;
 
@@ -36,12 +51,14 @@ export function ReAuthBanner({ status, checkCount }: ReAuthBannerProps) {
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
         <AlertIcon className="h-4 w-4 shrink-0" />
         <p className="min-w-0 flex-1 text-sm font-medium">{bannerMessage(status)}</p>
-        <form action="/api/upwork/connect" method="post" className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
-            type="submit"
-            className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-up-red transition-colors hover:bg-white/90"
+            type="button"
+            onClick={() => void startConnect()}
+            disabled={connecting}
+            className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-up-red transition-colors hover:bg-white/90 disabled:opacity-60"
           >
-            Reconnect to Upwork
+            {connecting ? 'Starting…' : 'Reconnect to Upwork'}
           </button>
           <button
             type="button"
@@ -50,8 +67,13 @@ export function ReAuthBanner({ status, checkCount }: ReAuthBannerProps) {
           >
             Dismiss
           </button>
-        </form>
+        </div>
       </div>
+      {connectError !== null && (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-2.5">
+          <p className="text-xs text-white/90">{connectError}</p>
+        </div>
+      )}
     </div>
   );
 }

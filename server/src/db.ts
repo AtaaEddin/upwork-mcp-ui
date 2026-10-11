@@ -50,6 +50,26 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    name: '003_tool_calls',
+    up: (db) => {
+      // Tool call log (plan 04). PII-safe by construction: args are hashed
+      // (sha256 of canonical JSON) and never stored; only ids/times/statuses.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS tool_calls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tool TEXT NOT NULL,
+          args_hash TEXT NOT NULL,
+          status_code INTEGER NOT NULL,
+          ms INTEGER NOT NULL,
+          error_class TEXT,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_tool_calls_created_at
+          ON tool_calls (created_at DESC, id DESC);
+      `);
+    },
+  },
 ];
 
 export function openDatabase(dataDir: string): Db {

@@ -6,6 +6,9 @@ import type { AppConfig } from './config.js';
 import { AppError, errorBody } from './errors.js';
 import type { RateLimiter } from './rate-limit.js';
 import type { SessionService } from './sessions.js';
+import { createToolRoutes } from './tools/routes.js';
+import type { ToolService } from './tools/service.js';
+import type { ToolCallLog } from './tools/store.js';
 import { createSpaMiddleware } from './static.js';
 import { createUpworkRoutes } from './upwork/routes.js';
 import type { UpworkConnectionService } from './upwork/service.js';
@@ -25,6 +28,9 @@ export interface AppDeps {
   staticDir?: string;
   /** Upwork connection service (plan 03). Omitted ⇒ no /api/upwork routes. */
   upwork?: UpworkConnectionService;
+  /** Tool proxy service + call log (plan 04). Omitted ⇒ no /api/tools routes. */
+  tools?: ToolService;
+  toolLog?: ToolCallLog;
 }
 
 type AppEnv = { Variables: { userId: number } };
@@ -51,6 +57,8 @@ const KNOWN_METHODS: Record<string, string[]> = {
   '/api/upwork/callback': ['GET'],
   '/api/upwork/status': ['GET'],
   '/api/upwork/disconnect': ['POST'],
+  '/api/tools': ['GET'],
+  '/api/tools/calls': ['GET'],
 };
 
 /**
@@ -94,6 +102,9 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   });
 
   if (deps.upwork) app.route('/api/upwork', createUpworkRoutes(deps.upwork));
+  if (deps.tools && deps.toolLog) {
+    app.route('/api', createToolRoutes({ service: deps.tools, log: deps.toolLog }));
+  }
 
   app.get('/api/healthz', (c) =>
     c.json({

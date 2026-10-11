@@ -3,6 +3,7 @@ import { AuthProvider } from './context/auth.js';
 import { Layout } from './components/Layout.js';
 import { RequireAuth } from './components/RequireAuth.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { ToolsPage } from './pages/ToolsPage.js';
 import {
   ContractsPage,
   DashboardPage,
@@ -12,7 +13,6 @@ import {
   NotFoundPage,
   ProfilePage,
   ProposalsPage,
-  ToolsPage,
 } from './pages/sections.js';
 
 export default function App() {

@@ -6,6 +6,7 @@ import {
   OAuthError,
   StreamableHTTPClientTransport,
   UnauthorizedError,
+  type FetchLike,
 } from '@modelcontextprotocol/client';
 import type { AppConfig } from '../config.js';
 import { AppError } from '../errors.js';
@@ -66,6 +67,16 @@ export class UpworkConnectionService {
   private timer: NodeJS.Timeout | null = null;
   private consecutiveFailures = 0;
   private opQueue: Promise<void> = Promise.resolve();
+  /** `Retry-After` (s) from the last upstream 429 on the MCP endpoint. */
+  private lastRetryAfterSec: number | undefined;
+  /**
+   * Transport fetch hook: observes upstream `Retry-After` on 429s so the tool
+   * API can echo it (the SDK's SdkHttpError does not carry response headers).
+   * OAuth-endpoint requests use the provider's own fetch — not this one.
+   */
+  private readonly transportFetch: FetchLike;
+  /** Plan 04: ToolService invalidates its list cache on server notifications. */
+  private readonly toolsListChanged = new Set<() => void>();
 
   constructor(private readonly opts: UpworkServiceOptions) {
     if (!opts.config.APP_SECRET) throw new Error('APP_SECRET is required for the Upwork connection');
@@ -80,6 +91,19 @@ export class UpworkConnectionService {
       now: opts.now,
       log: opts.log,
     });
+    // Plan 04: observe upstream `Retry-After` on 429s so the tool API can echo
+    // it (the SDK's SdkHttpError does not carry response headers).
+    this.transportFetch = async (input, init) => {
+      const res = await fetch(input, init);
+      if (res.status === 429) {
+        const raw = res.headers.get('retry-after');
+        if (raw !== null && raw.trim() !== '') {
+          const n = Number(raw);
+          if (Number.isFinite(n) && n >= 0) this.lastRetryAfterSec = Math.min(Math.floor(n), 600);
+        }
+      }
+      return res;
+    };
   }
 
   // ---- public API ----------------------------------------------------------
@@ -152,6 +176,7 @@ export class UpworkConnectionService {
       }
       const transport = new StreamableHTTPClientTransport(new URL(this.opts.config.UPWORK_MCP_URL), {
         authProvider: this.provider,
+        fetch: this.transportFetch,
       });
       try {
         await transport.finishAuth(query);
@@ -223,6 +248,42 @@ export class UpworkConnectionService {
     }
   }
 
+  /**
+   * Run `fn` against the live MCP session, serialized with connect/disconnect
+   * and all other MCP traffic (single queue — no parallel fan-out). Callers
+   * must have checked the connection state first; a non-`connected` state is
+   * a 409 at the API layer, not a failure here.
+   */
+  async withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
+    return this.withLock(async () => {
+      const client = await this.ensureClient();
+      return fn(client);
+    });
+  }
+
+  /**
+   * Subscribe to server `tools/list_changed` notifications (plan 04). The
+   * SDK only delivers them on connections where the server advertises the
+   * capability. Returns an unsubscribe function.
+   */
+  onToolsListChanged(fn: () => void): () => void {
+    this.toolsListChanged.add(fn);
+    return () => {
+      this.toolsListChanged.delete(fn);
+    };
+  }
+
+  /**
+   * `Retry-After` seconds observed on the last upstream 429, if any
+   * (plan 04 tool API). Cleared on read so a stale value never leaks into a
+   * later error.
+   */
+  consumeRetryAfterSec(): number | undefined {
+    const v = this.lastRetryAfterSec;
+    this.lastRetryAfterSec = undefined;
+    return v;
+  }
+
   start(): void {
     if (this.timer) return;
     const intervalMs = this.opts.intervalMs ?? this.opts.config.UPWORK_KEEPALIVE_MS;
@@ -270,8 +331,23 @@ export class UpworkConnectionService {
     await this.teardown();
     const transport = new StreamableHTTPClientTransport(new URL(this.opts.config.UPWORK_MCP_URL), {
       authProvider: this.provider,
+      fetch: this.transportFetch,
     });
-    const client = new Client({ name: 'upwork-mcp-ui', version: '0.1.0' });
+    const client = new Client(
+      { name: 'upwork-mcp-ui', version: '0.1.0' },
+      // Plan 04: drop the tool-list cache when the server says the list
+      // changed (only fires if the server advertises the capability).
+      {
+        listChanged: {
+          tools: {
+            onChanged: () => {
+              this.opts.log?.('upwork tools list changed (server notification)');
+              for (const fn of this.toolsListChanged) fn();
+            },
+          },
+        },
+      },
+    );
     let connected = false;
     try {
       await client.connect(transport);

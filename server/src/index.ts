@@ -6,6 +6,8 @@ import { loadConfig } from './config.js';
 import { openDatabase } from './db.js';
 import { RateLimiter } from './rate-limit.js';
 import { SessionService } from './sessions.js';
+import { ToolService } from './tools/service.js';
+import { ToolCallLog } from './tools/store.js';
 import { UpworkConnectionService } from './upwork/service.js';
 
 const config = loadConfig();
@@ -24,12 +26,23 @@ const upwork = new UpworkConnectionService({
 });
 upwork.start();
 
+// Plan 04: tool proxy (ALL tools) + call log.
+const toolLog = new ToolCallLog(db);
+const tools = new ToolService({
+  connection: upwork,
+  log: toolLog,
+  config,
+  logLine: (m) => console.error(m),
+});
+
 const app = createApp({
   config,
   auth,
   sessions,
   loginLimiter,
   upwork,
+  tools,
+  toolLog,
   // Resolves to <repo>/web/dist from both server/src (tsx dev) and server/dist (node).
   staticDir: fileURLToPath(new URL('../../web/dist', import.meta.url)),
 });

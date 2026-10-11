@@ -2,8 +2,9 @@ import { Link } from 'react-router';
 import { EmptyState } from '../components/EmptyState.js';
 
 /**
- * Placeholder sections (plan 05 layout). Real data binding lands in plans
- * 04/06/07 — each page records which one.
+ * Placeholder sections (plan 05 layout). The tools console (plan 04) lives in
+ * its own file (ToolsPage.tsx); real data binding for the rest lands in
+ * plans 06/07 — each page records which one.
  */
 export function DashboardPage() {
   return (
@@ -71,16 +72,6 @@ export function ProfilePage() {
       title="Profile & earnings"
       description="Earnings and available balance, plus availability, employment, languages, education, portfolio, and profile visibility."
       plan="plan 07"
-    />
-  );
-}
-
-export function ToolsPage() {
-  return (
-    <EmptyState
-      title="Tools console"
-      description="Every tool the Upwork MCP server exposes — searchable list, JSON args editor, and result viewer. This is how any new tool becomes usable immediately."
-      plan="plan 04"
     />
   );
 }

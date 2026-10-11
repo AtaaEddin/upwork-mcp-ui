@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   connectionDotClass,
   connectionLabel,
@@ -81,5 +81,52 @@ describe('connection labels', () => {
     expect(connectionDotClass({ state: 'needs_reauth' })).toContain('bg-up-red');
     expect(connectionDotClass({ state: 'disconnected' })).toContain('bg-gray-400');
     expect(connectionDotClass({ state: 'unknown' })).toContain('bg-gray-400');
+  });
+});
+
+import { fetchMock, jsonResponse } from '../test/fetchMock.js';
+import { connectToUpwork } from './upwork.js';
+
+describe('connectToUpwork', () => {
+  it('navigates to the authorize URL when one is issued', async () => {
+    const navigate = vi.fn();
+    const fetchImpl = fetchMock({
+      '/api/upwork/connect': (req) =>
+        req.method === 'POST' ? jsonResponse({ authorizeUrl: 'http://fake.upwork.local/authorize' })
+          : jsonResponse({ error: { code: 'method_not_allowed', message: 'no' } }, 405),
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+
+    await connectToUpwork(navigate);
+
+    expect(navigate).toHaveBeenCalledWith('http://fake.upwork.local/authorize');
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toBe('/api/upwork/connect');
+    expect(fetchImpl.mock.calls[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('does not navigate when the connection is already established', async () => {
+    const navigate = vi.fn();
+    const fetchImpl = fetchMock({
+      '/api/upwork/connect': (req) =>
+        req.method === 'POST' ? jsonResponse({ state: 'connected' })
+          : jsonResponse({ error: { code: 'method_not_allowed', message: 'no' } }, 405),
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+
+    await connectToUpwork(navigate);
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('rejects on API errors', async () => {
+    const fetchImpl = fetchMock({
+      '/api/upwork/connect': (req) =>
+        req.method === 'POST'
+          ? jsonResponse({ error: { code: 'conflict', message: 'already connecting' } }, 409)
+          : jsonResponse({ error: { code: 'method_not_allowed', message: 'no' } }, 405),
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+
+    await expect(connectToUpwork()).rejects.toMatchObject({ status: 409, code: 'conflict' });
   });
 });

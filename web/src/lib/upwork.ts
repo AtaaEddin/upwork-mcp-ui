@@ -1,3 +1,5 @@
+import { apiFetch } from './api.js';
+
 /**
  * Types + pure logic for the Upwork connection status.
  * The API contract (`GET /api/upwork/status`) is defined in plan 03; this
@@ -81,5 +83,28 @@ export function connectionDotClass(status: UpworkStatus): string {
       return 'bg-gray-400 dark:bg-gray-500';
     case 'unknown':
       return 'bg-gray-400 dark:bg-gray-500';
+  }
+}
+
+/** Response of `POST /api/upwork/connect` (plan 03 contract). */
+export interface ConnectResponse {
+  /** Present unless the connection is already established. */
+  authorizeUrl?: string;
+  state?: string;
+}
+
+/**
+ * One-click reconnect (plan 05 requirement, used by the re-auth banner and
+ * the tools console CTA): start the OAuth flow and follow the issued
+ * authorize URL in the top-level window. The server answers with JSON (not
+ * a 3xx), so the browser must follow the URL client-side. `navigate` is
+ * injectable for tests.
+ */
+export async function connectToUpwork(navigate?: (url: string) => void): Promise<void> {
+  const res = await apiFetch<ConnectResponse>('/api/upwork/connect', { method: 'POST' });
+  if (res !== null && typeof res === 'object' && typeof res.authorizeUrl === 'string' && res.authorizeUrl !== '') {
+    (navigate ?? ((u: string): void => {
+      window.location.assign(u);
+    }))(res.authorizeUrl);
   }
 }

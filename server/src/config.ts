@@ -23,6 +23,10 @@ const EnvSchema = z.object({
    * Must be set to the public origin in production (not just localhost).
    */
   PUBLIC_BASE_URL: z.string().url().optional(),
+  /** Per tools/call timeout against the Upwork MCP server (plan 04). */
+  MCP_TOOL_CALL_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
+  /** tools/list cache TTL in ms (plan 04). */
+  MCP_TOOLS_CACHE_TTL_MS: z.coerce.number().int().min(5_000).max(3_600_000).default(60_000),
   /** Upwork keepalive ping interval (default 5 min, clamped 5 s – 1 h). */
   UPWORK_KEEPALIVE_MS: z.coerce
     .number()
