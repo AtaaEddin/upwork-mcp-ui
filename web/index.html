@@ -4,7 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Self-hosted freelancer UI for the official Upwork MCP server" />
     <title>Upwork MCP UI</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314a800'/%3E%3Ctext x='16' y='22' font-family='Arial,sans-serif' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3Eu%3C/text%3E%3C/svg%3E"
+    />
+    <script>
+      // Apply the theme before first paint (no FOUC). Mirrors
+      // urlThemeOverride()/initialTheme() in src/hooks/useTheme.ts:
+      // ?theme= light|dark override, then localStorage, then system preference.
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var t = params.get('theme');
+          var stored = t === 'light' || t === 'dark' ? t : localStorage.getItem('upwork-theme');
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (err) {
+          /* non-fatal: theme falls back to light */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

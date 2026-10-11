@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (Tailwind v4 documented approach) — see plan 05. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Upwork design tokens — sampled from live upwork.com CSS (Oct 2026).
@@ -33,4 +34,10 @@ body {
 
 .dark body {
   @apply bg-up-black text-white;
+}
+
+/* Consistent keyboard focus indicator (a11y). */
+:focus-visible {
+  outline: 2px solid var(--color-up-green);
+  outline-offset: 2px;
 }
