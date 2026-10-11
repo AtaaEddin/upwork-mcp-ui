@@ -61,8 +61,9 @@ done: 2026-10-11
   keeping the image/repo small (self-host constraint). `web/scripts/browser-verify.mjs`
   logs in through the real form against a running production server and screenshots
   login/dashboard/404 at 375px + 1440px, light + dark; `BANNER_SHOTS=1` mode points at a
-  fake API for the re-auth banner. Reusable for plans 06/07. Dev-time only — not shipped.
-  Sources: https://pptr.dev/ (puppeteer vs puppeteer-core),
+  fake API for the re-auth banner. Reusable for plans 06/07. Dev-time only — not
+  shipped. `eslint.config.js` declares the few Node globals the scripts use (no new
+  dependency for this). Sources: https://pptr.dev/ (puppeteer vs puppeteer-core),
   https://www.npmjs.com/package/puppeteer-core (registry, 2026-10-11).
 - **Unknown-status pill = gray dot + `…` short label** with the full wording
   ("Upwork status unknown") in `aria-label`/`title`. Visible text stays minimal in the
