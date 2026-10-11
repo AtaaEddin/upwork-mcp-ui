@@ -116,7 +116,7 @@ Hono BFF (Node 26, TS strict)
 | 04 | `04-mcp-tool-proxy-api.md` — /api/tools + tool-call API (ALL tools), error mapping, call log, tools console | done |
 | 05 | `05-frontend-shell.md` — React+Tailwind shell, Upwork design tokens, layout, login page, re-auth banner | done |
 | 06 | `06-dashboard-jobs.md` — freelancer dashboard + job search/detail (after tool discovery) | done |
-| 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | proposed |
+| 07 | `07-proposals-invitations-messages.md` — proposals (draft-confirm), invitations/offers, messages, contracts, earnings, profile | in-progress (slice 07a) |
 | 08 | `08-deploy-hardening.md` — image size, backups, smoke tests, final docs | proposed |
 | 09 | `09-pi-deployment.md` — Raspberry Pi deploy: bootstrap scripts, Cloudflare tunnel (DDNS/Caddy fallback) | in-progress |
 

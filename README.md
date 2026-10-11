@@ -15,15 +15,15 @@ calls the tools directly.
 
 - [x] Repo scaffold, toolchain, Docker (plan 01)
 - [x] Owner login, single-user session (plan 02)
-- [ ] One-click Upwork sign-in (OAuth 2.1) + **re-auth banner** when the connection expires
+- [x] One-click Upwork sign-in (OAuth 2.1) + **re-auth banner** when the connection expires
       (plans 03, 05)
-- [ ] **Every MCP tool reachable** via a generic tool API + tools console (plan 04)
-- [ ] Freelancer dashboard: invitations, offers, messages, matched jobs, Connects balance
+- [x] **Every MCP tool reachable** via a generic tool API + tools console (plan 04)
+- [x] Freelancer dashboard: invitations, offers, messages, matched jobs, Connects balance
       (plan 06)
-- [ ] Job search & detail (plan 06)
+- [x] Job search & detail (plan 06)
 - [ ] Proposals with draft-confirm, invitations/offers, messages, contracts, earnings,
-      profile (plan 07)
-- [ ] Design matching upwork.com (green `#14a800` system, light + dark themes) (plan 05)
+      profile (plan 07, in progress)
+- [x] Design matching upwork.com (green `#14a800` system, light + dark themes) (plan 05)
 
 See [`doc/plans/`](doc/plans/) for the full plan system and
 [`AGENTS.md`](AGENTS.md) for contributor/agent rules.
@@ -70,6 +70,25 @@ docker compose up --build -d
 # → http://localhost:8787
 ```
 
+## Raspberry Pi deployment (plan 09)
+
+For a Raspberry Pi 4 (64-bit Raspberry Pi OS) behind a dynamic public IP, the app is
+exposed through a **Cloudflare Tunnel** (named tunnel, TLS at the Cloudflare edge) — no
+router port forwarding or DDNS needed.
+
+1. Create a tunnel + public hostname in the Cloudflare dashboard (Networking → Tunnels)
+   and copy the tunnel token.
+2. On the Pi:
+
+   ```bash
+   bash scripts/pi/install.sh   # installs Docker if missing, generates .env + secrets, builds & starts
+   bash scripts/pi/status.sh    # containers, reachability, disk, memory
+   ```
+
+`install.sh` is idempotent (never regenerates existing secrets) and prints the generated
+`OWNER_PASSWORD` once. Details, acceptance steps, and a documented fallback (Caddy + DDNS):
+[plan 09](doc/plans/20261010-2319_upwork-freelancer-ui-mcp/09-pi-deployment.md).
+
 ## Environment variables
 
 | Var | Default | Description |
@@ -82,6 +101,10 @@ docker compose up --build -d
 | `SESSION_TTL_MS` | `604800000` | Owner session lifetime (7 days, sliding) |
 | `DATA_DIR` | `./data` | SQLite database location (gitignored, never committed) |
 | `UPWORK_MCP_URL` | `https://mcp.upwork.com/mcp` | Official Upwork MCP endpoint |
+| `PUBLIC_BASE_URL` | `http://localhost:PORT` | Public origin (no trailing slash); OAuth redirect base |
+| `UPWORK_KEEPALIVE_MS` | `300000` | Upwork keepalive ping interval in ms (clamped 5 s – 1 h) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | — | Cloudflare Tunnel token (plan 09). Empty = the tunnel container does not run |
+| `COMPOSE_PROFILES` | — | Compose profiles; `tunnel` activates `cloudflared` (set by the Pi install script) |
 
 ### First run
 
