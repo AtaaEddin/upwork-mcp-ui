@@ -4,6 +4,11 @@
 FROM node:26-slim AS build
 WORKDIR /app
 
+# Build toolchain: compiles native modules (better-sqlite3 has no Node 26
+# prebuilds). Build stage only — the runtime image stays slim.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first (layer cache)
 COPY package.json package-lock.json .npmrc ./
 COPY server/package.json server/
@@ -14,6 +19,9 @@ COPY tsconfig.base.json eslint.config.js ./
 COPY server server
 COPY web web
 RUN npm run build
+
+# Drop dev dependencies before copying into the runtime stage
+RUN npm prune --omit=dev
 
 # ---- runtime stage ----
 FROM node:26-slim AS runtime

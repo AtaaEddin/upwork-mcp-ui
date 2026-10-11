@@ -14,7 +14,7 @@ calls the tools directly.
 ## Features (roadmap)
 
 - [x] Repo scaffold, toolchain, Docker (plan 01)
-- [ ] Owner login, single-user session (plan 02)
+- [x] Owner login, single-user session (plan 02)
 - [ ] One-click Upwork sign-in (OAuth 2.1) + **re-auth banner** when the connection expires
       (plans 03, 05)
 - [ ] **Every MCP tool reachable** via a generic tool API + tools console (plan 04)
@@ -76,9 +76,27 @@ docker compose up --build -d
 |-----|---------|-------------|
 | `PORT` | `8787` | HTTP port (API + built SPA) |
 | `HOST` | `0.0.0.0` | Bind address |
-| `APP_SECRET` | — | **Required in production.** Random 32+ chars; encrypts stored OAuth tokens and signs session cookies |
+| `NODE_ENV` | `development` | `development` / `production`. Production requires `APP_SECRET`. |
+| `APP_SECRET` | — | **Required in production.** Random 32+ chars; encrypts stored OAuth tokens |
+| `OWNER_PASSWORD` | — | Optional first-run owner password (min 8 chars) |
+| `SESSION_TTL_MS` | `604800000` | Owner session lifetime (7 days, sliding) |
 | `DATA_DIR` | `./data` | SQLite database location (gitignored, never committed) |
 | `UPWORK_MCP_URL` | `https://mcp.upwork.com/mcp` | Official Upwork MCP endpoint |
+
+### First run
+
+The app is single-owner and ships with **no default credentials**. Pick one:
+
+- `OWNER_PASSWORD=...` — the owner account is created at boot (headless/Docker);
+- or leave it unset: the first browser visitor completes a one-time setup
+  (`POST /api/setup`, disabled as soon as an owner exists).
+
+Login is password-only (no username). Sessions are opaque tokens in an `HttpOnly`
+cookie with sliding 7-day expiry; logout revokes server-side. Login attempts are
+rate-limited per IP (10 per 15 min).
+
+> **Never commit** the real `.env` file, the `data/` directory, or anything that looks
+> like an OAuth token/session cookie. Logs contain ids and timestamps only.
 
 ## Scripts
 
