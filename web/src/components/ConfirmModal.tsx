@@ -43,9 +43,13 @@ export function ConfirmModal({
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Fresh state each time the dialog opens.
+  // Reset the outcome while CLOSED (not on open): the component instance
+  // survives across open/close (it renders null when closed), and a stale
+  // `done`/`error` state would flash for one frame on the next open before
+  // an effect-driven reset lands — including on the same modal reused for
+  // a different action (e.g. the shared OfferActions across list rows).
   useEffect(() => {
-    if (open) {
+    if (!open) {
       setPhase('confirm');
       setDone(null);
       setError(null);

@@ -42,6 +42,8 @@ interface Scenario {
   /** Structured content of `manage_proposals` create (or a tool error). */
   create?: unknown;
   createError?: string;
+  /** Structured content for accept_invitation / decline_invitation. */
+  invitationResponse?: unknown;
   /** Structured content of `confirm_preview` confirm. */
   confirm?: unknown;
   confirmError?: string;
@@ -145,6 +147,14 @@ function toolRoute(
       });
     }
     if (tool === 'upwork__manage_proposals') {
+      if (action === 'accept_invitation' || action === 'decline_invitation') {
+        return jsonResponse({
+          isError: false,
+          ms: 1,
+          content: [],
+          structuredContent: scenario.invitationResponse ?? { status: 'ok' },
+        });
+      }
       if (scenario.createError !== undefined) {
         return jsonResponse({
           isError: true,
@@ -191,7 +201,7 @@ function toolRoute(
   };
 }
 
-function renderPage(scenario: Scenario = {}) {
+function renderPage(scenario: Scenario = {}, entry = '/jobs/~02jobalpha/propose') {
   const calls: Array<{ tool: string; args: Record<string, unknown> }> = [];
   vi.stubGlobal(
     'fetch',
@@ -239,7 +249,7 @@ function renderPage(scenario: Scenario = {}) {
     }),
   );
   render(
-    <MemoryRouter initialEntries={['/jobs/~02jobalpha/propose']}>
+    <MemoryRouter initialEntries={[entry]}>
       <AccountProvider>
         <Routes>
           <Route path="/jobs/:jobKey/propose" element={<ProposalDraftPage />} />
@@ -423,15 +433,67 @@ describe('ProposalDraftPage (plan 07a)', () => {
     expect(screen.queryByLabelText('Cover letter')).toBeNull();
   });
 
-  it('invited jobs show the invitation notice instead of the form', async () => {
+  it('invited jobs show the invitation notice with inline accept/decline', async () => {
     renderPage({ invitation: true });
     expect(
       await screen.findByText(/this job reached you as an invitation/i),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText('Cover letter')).toBeNull();
-    expect(screen.getByRole('link', { name: /view invitations/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /accept invitation/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^decline$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view all invitations/i })).toHaveAttribute(
       'href',
       '/invitations',
     );
+  });
+
+  it('inline accept on an invited job: confirm → binding finalize link', async () => {
+    const { calls } = renderPage({
+      invitation: true,
+      invitationResponse: {
+        status: 'action_required',
+        finalize_url: 'https://www.upwork.com/ab/2/fin',
+      },
+    });
+    await screen.findByRole('button', { name: /accept invitation/i });
+    expect(callsFor(calls, 'upwork__manage_proposals')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: /accept invitation/i }));
+    await screen.findByText(/accepting is a binding action/i);
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Accept' }),
+    );
+    const link = await screen.findByRole('link', { name: /finish on upwork\.com/i });
+    expect(link).toHaveAttribute('href', 'https://www.upwork.com/ab/2/fin');
+    const acceptCall = callsFor(calls, 'upwork__manage_proposals')[0];
+    expect(acceptCall?.args).toEqual({
+      action: 'accept_invitation',
+      job_id: '111',
+      org_uid: 'org-1',
+    });
+  });
+
+  it('inline decline on an invited job: success → handled summary', async () => {
+    renderPage({ invitation: true, invitationResponse: { status: 'ok' } });
+    await screen.findByRole('button', { name: /^decline$/i });
+
+    fireEvent.click(screen.getByRole('button', { name: /^decline$/i }));
+    await screen.findByRole('dialog');
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Decline' }),
+    );
+    expect(await screen.findByText(/invitation handled/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /accept invitation/i })).toBeNull();
+  });
+
+  it('placeholder key (row-N): preflight makes no find_jobs get call (plan 10)', async () => {
+    const { calls } = renderPage({}, '/jobs/row-9/propose');
+
+    // The other preflight features still run; wait for them, then prove the
+    // job `get` was skipped (a placeholder key is not a valid `id`).
+    await waitFor(() =>
+      expect(callsFor(calls, 'upwork__list_freelancer_proposals')).toHaveLength(2),
+    );
+    expect(callsFor(calls, 'upwork__find_jobs')).toHaveLength(0);
   });
 });

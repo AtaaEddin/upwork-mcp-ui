@@ -53,6 +53,28 @@ export const FEATURES = {
   },
   /** `confirm_preview` action `confirm` — the submit step (plan 07a). */
   confirmPreview: { key: 'proposals.confirm', tools: ['upwork__confirm_preview'], action: 'confirm' },
+  /** Invitation accept — BINDING, expect `finalize_url` (plan 07b, D7.6). */
+  invitationsAccept: {
+    key: 'invitations.accept',
+    tools: ['upwork__manage_proposals'],
+    action: 'accept_invitation',
+  },
+  /** Invitation decline — reversible (plan 07b, D7.6). */
+  invitationsDecline: {
+    key: 'invitations.decline',
+    tools: ['upwork__manage_proposals'],
+    action: 'decline_invitation',
+  },
+  /** Offer accept — BINDING, expect `finalize_url` (plan 07b, D7.6). */
+  offerAccept: { key: 'offers.accept', tools: ['upwork__respond_to_offer'], action: 'accept' },
+  /** Offer decline — returns a preview (second confirm step, D7.6). */
+  offerDecline: { key: 'offers.decline', tools: ['upwork__respond_to_offer'], action: 'decline' },
+  /** Offer request-changes — preview + `message` (second confirm step). */
+  offerRequestChanges: {
+    key: 'offers.request_changes',
+    tools: ['upwork__respond_to_offer'],
+    action: 'request_changes',
+  },
   profileGet: { key: 'profile.get', tools: ['upwork__get_profile'], action: 'get' },
   /** Portfolio projects + certificates (TALENT) for proposal highlights. */
   profileHighlights: { key: 'profile.highlights', tools: ['upwork__get_profile'], action: 'list_highlights' },

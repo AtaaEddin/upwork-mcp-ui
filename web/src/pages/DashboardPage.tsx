@@ -130,7 +130,7 @@ export function DashboardPage() {
           state={offers.state}
           tool={FEATURES.offers.tools[0]}
           onRetry={offers.reload}
-          render={(data) => renderList(data, 'No open offers.', '/invitations')}
+          render={(data) => renderList(data, 'No open offers.', '/invitations?tab=offers')}
         />
         <FeatureCard
           title="Active messages"

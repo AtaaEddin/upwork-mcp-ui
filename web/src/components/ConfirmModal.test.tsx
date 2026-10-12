@@ -92,6 +92,34 @@ describe('ConfirmModal', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
   });
 
+  it('a reopened modal never shows the previous outcome (shared instance)', async () => {
+    const onConfirm = vi.fn(async (): Promise<ConfirmOutcome> => ({
+      status: 'done',
+      message: 'old binding message',
+      finalizeUrl: 'https://www.upwork.com/finalize/1',
+    }));
+    const props = (open: boolean, title: string, summary: string) => (
+      <ConfirmModal open={open} title={title} summary={summary} onConfirm={onConfirm} onClose={() => {}} />
+    );
+
+    const { rerender } = render(props(true, 'Accept invitation', 'first action'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await screen.findByText('old binding message');
+
+    // Parent closes the dialog (e.g. "Done"), then reuses the same instance
+    // for a different action — exactly what happens with the shared
+    // InvitationActions/OfferActions panel across list rows.
+    rerender(props(false, 'Accept invitation', 'first action'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    rerender(props(true, 'Decline invitation', 'second action'));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName('Decline invitation');
+    expect(screen.getByText('second action')).toBeInTheDocument();
+    expect(screen.queryByText('old binding message')).toBeNull();
+    expect(screen.queryByRole('link', { name: /finish on upwork\.com/i })).toBeNull();
+  });
+
   it('ESC closes from the confirm phase, not while running', async () => {
     let resolve!: (o: ConfirmOutcome) => void;
     const pending = new Promise<ConfirmOutcome>((r) => (resolve = r));

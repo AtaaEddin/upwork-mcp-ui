@@ -13,6 +13,18 @@
  * `canConfirmPreview` — the guard the UI enforces before any confirm call.
  */
 
+import {
+  dateOf,
+  entityRecord,
+  extractListItems,
+  formatMoney,
+  isRecord,
+  numberOr,
+  numericStringOf,
+  stringList,
+  stringOrNumber,
+} from './shape.js';
+
 export interface ProposalRow {
   /** Stable DOM key. */
   key: string;
@@ -346,9 +358,8 @@ export function jobNumericIdOf(data: unknown): string | null {
   const rec = entityRecord(data, ['job', 'item', 'data']);
   if (rec === null) return null;
   for (const key of ['id_numeric', 'numeric_id', 'id', 'job_id']) {
-    const v = rec[key];
-    if (typeof v === 'number' && Number.isFinite(v)) return String(Math.trunc(v));
-    if (typeof v === 'string' && /^\d+$/.test(v.trim())) return v.trim();
+    const n = numericStringOf(rec[key]);
+    if (n !== null) return n;
   }
   return null;
 }
@@ -423,67 +434,6 @@ export function parseConfirmResult(data: unknown): ConfirmResult {
   };
 }
 
-function extractListItems(data: unknown, keys: string[]): unknown[] {
-  if (Array.isArray(data)) return data;
-  if (!isRecord(data)) return [];
-  for (const key of keys) {
-    const v = data[key];
-    if (Array.isArray(v)) return v;
-  }
-  for (const v of Object.values(data)) {
-    if (Array.isArray(v) && v.length > 0 && v.every((x) => x !== null && typeof x === 'object')) {
-      return v;
-    }
-  }
-  return [];
-}
-
-function entityRecord(
-  data: unknown,
-  preferred: string[],
-): Record<string, unknown> | null {
-  if (data === null || typeof data !== 'object' || Array.isArray(data)) return null;
-  const rec = data as Record<string, unknown>;
-  for (const key of preferred) {
-    const v = rec[key];
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-      return v as Record<string, unknown>;
-    }
-  }
-  return rec;
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
-}
-
-function stringOrNumber(v: unknown): string | null {
-  if (typeof v === 'string' && v.trim() !== '') return v.trim();
-  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
-  return null;
-}
-
-function numberOr(v: unknown): number | null {
-  return typeof v === 'number' && Number.isFinite(v) ? v : null;
-}
-
-function dateOf(v: unknown): string | null {
-  return stringOrNumber(v);
-}
-
-function stringList(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  const out: string[] = [];
-  for (const x of v) {
-    if (typeof x === 'string' && x.trim() !== '') out.push(x.trim());
-    else if (x !== null && typeof x === 'object') {
-      const s = stringOrNumber((x as Record<string, unknown>).name ?? (x as Record<string, unknown>).title);
-      if (s !== null) out.push(s);
-    }
-  }
-  return out;
-}
-
 function highlightItems(v: unknown): Array<{ id: string; title: string }> {
   if (!Array.isArray(v)) return [];
   const out: Array<{ id: string; title: string }> = [];
@@ -503,13 +453,6 @@ function formatCharged(rec: Record<string, unknown>): string | null {
   const terms = (rec.terms ?? null) as Record<string, unknown> | null;
   const v = terms !== null ? terms.charged_amount ?? terms.bid ?? terms.amount : rec.charged_amount ?? rec.bid;
   return formatMoney(stringOrNumber(v));
-}
-
-function formatMoney(v: string | null): string | null {
-  if (v === null) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return v;
-  return `$${n.toLocaleString('en-US')}`;
 }
 
 function competingBidsOf(rec: Record<string, unknown>): string | null {

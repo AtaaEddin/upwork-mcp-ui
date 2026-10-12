@@ -6,14 +6,14 @@ import { useAccount } from '../context/account.js';
 import { useFeature, type FeatureState } from '../hooks/useFeature.js';
 import { useToolList } from '../hooks/useToolList.js';
 import { useUpworkStatus } from '../hooks/useUpworkStatus.js';
-import { buildGetArgs, mapJobDetail } from '../lib/jobs.js';
+import { buildGetArgs, isPlaceholderJobKey, mapJobDetail } from '../lib/jobs.js';
+import { InvitationActions } from '../components/InvitationActions.js';
 import {
   buildConfirmArgs,
   buildCreateArgs,
   canConfirmPreview,
   clientFeedbackOf,
   highlightsOf,
-  invitationsOf,
   jobNumericIdOf,
   mapProposalDetail,
   mapProposals,
@@ -24,6 +24,7 @@ import {
   screeningQuestionsOf,
   type ProposalPreview,
 } from '../lib/proposals.js';
+import { mapInvitations, type InvitationRow } from '../lib/invitations.js';
 import { callFeature, FEATURES, liveToolNames, resolveTool } from '../lib/registry.js';
 import { connectsBalanceOf } from '../lib/rows.js';
 import { toastSuccess } from '../lib/toast.js';
@@ -38,7 +39,8 @@ import { toastSuccess } from '../lib/toast.js';
  *
  * The submit control exists only after step 1 returned a confirmable
  * `preview_id` + `type` (`canConfirmPreview`, D7.3). Pre-draft checks:
- * an existing invitation → invitation notice (accept/decline is 07b),
+ * an existing invitation → invitation notice WITH inline accept/decline
+ * (plan 07b, D7.5: the shared `InvitationActions` panel),
  * an existing proposal / applied job → "already applied" notice (Upwork
  * rejects duplicate applications upstream).
  */
@@ -66,8 +68,12 @@ export function ProposalDraftPage() {
   const live = useMemo(() => liveToolNames(tools), [tools]);
 
   // --- Preflight features (best effort, per-card degradation) -------------
+  // `row-<index>` placeholder keys are not valid `find_jobs get` ids (plan 10).
   const jobArgs = useMemo(
-    () => (orgUid !== null && jobKey !== '' ? buildGetArgs(jobKey, orgUid) : null),
+    () =>
+      orgUid !== null && jobKey !== '' && !isPlaceholderJobKey(jobKey)
+        ? buildGetArgs(jobKey, orgUid)
+        : null,
     [orgUid, jobKey],
   );
   const job = useFeature(FEATURES.jobGet, resolveTool(FEATURES.jobGet, live), orgUid, jobArgs, {
@@ -129,26 +135,26 @@ export function ProposalDraftPage() {
   // --- Branch: already applied / invited ----------------------------------
   // 'none' only once both checks have resolved (a pending invitations check
   // must not hide the invitation notice behind the form).
-  const branch: 'applied' | 'invited' | 'none' | null = useMemo(() => {
-    if (job.state.kind !== 'ok' || detail === null) return null;
-    if (detail.applied) return 'applied';
-    const existingResolved = isResolved(existing.state);
-    const invitationsResolved = isResolved(invitations.state);
-    if (!existingResolved || !invitationsResolved) return null;
-    if (
-      existing.state.kind === 'ok' &&
-      mapProposals(existing.state.data).some((r) => matchesJob(r.raw, identifiers))
-    ) {
-      return 'applied';
-    }
-    if (
-      invitations.state.kind === 'ok' &&
-      invitationsOf(invitations.state.data).some((r) => matchesJob(r, identifiers))
-    ) {
-      return 'invited';
-    }
-    return 'none';
-  }, [job.state, detail, existing.state, invitations.state, identifiers]);
+  const branch: null | { kind: 'applied' } | { kind: 'none' } | { kind: 'invited'; invitation: InvitationRow | null } =
+    useMemo(() => {
+      if (job.state.kind !== 'ok' || detail === null) return null;
+      if (detail.applied) return { kind: 'applied' };
+      const existingResolved = isResolved(existing.state);
+      const invitationsResolved = isResolved(invitations.state);
+      if (!existingResolved || !invitationsResolved) return null;
+      if (
+        existing.state.kind === 'ok' &&
+        mapProposals(existing.state.data).some((r) => matchesJob(r.raw, identifiers))
+      ) {
+        return { kind: 'applied' };
+      }
+      if (invitations.state.kind === 'ok') {
+        const rows = mapInvitations(invitations.state.data);
+        const row = rows.find((r) => matchesJob(r.raw, identifiers)) ?? null;
+        if (row !== null) return { kind: 'invited', invitation: row };
+      }
+      return { kind: 'none' };
+    }, [job.state, detail, existing.state, invitations.state, identifiers]);
 
   // --- Draft values -------------------------------------------------------
   const [stage, setStage] = useState<Stage>('form');
@@ -161,6 +167,9 @@ export function ProposalDraftPage() {
   const [projectIds, setProjectIds] = useState<string[]>([]);
   const [certIds, setCertIds] = useState<string[]>([]);
   const [boostInput, setBoostInput] = useState('');
+  // Set when the inline accept/decline succeeds (D7.5/D7.6): the notice
+  // then summarizes instead of re-offering a stale action.
+  const [invitedHandled, setInvitedHandled] = useState(false);
 
   const bidNum = parseBid(bid);
   const screeningAnswers = questions
@@ -344,22 +353,27 @@ export function ProposalDraftPage() {
           onAskSubmit={() => setConfirmStep('submit')}
           submitDisabled={!canConfirmPreview(preview)}
         />
-      ) : branch === 'applied' ? (
+      ) : branch === null ? (
+        <div className="rounded-lg border border-up-border bg-white px-6 py-6 text-sm text-up-black/60 dark:border-white/15 dark:bg-white/5 dark:text-white/60">
+          Checking this job…
+        </div>
+      ) : branch.kind === 'applied' ? (
         <NoticeCard
           title="You already applied to this job"
           body="Upwork won't accept a duplicate application for the same job. Review your existing proposal instead."
           link={{ to: '/proposals', label: 'View proposals' }}
         />
-      ) : branch === 'invited' ? (
-        <NoticeCard
-          title="This job reached you as an invitation"
-          body="Invited jobs are accepted or declined, not applied to. Accept / decline / ask changes for this job will be available on the Invitations page."
-          link={{ to: '/invitations', label: 'View invitations' }}
+      ) : branch.kind === 'invited' ? (
+        <InvitedCard
+          invitation={branch.invitation}
+          orgUid={orgUid}
+          live={live}
+          handled={invitedHandled}
+          onDone={() => {
+            setInvitedHandled(true);
+            void invitations.reload();
+          }}
         />
-      ) : branch === null ? (
-        <div className="rounded-lg border border-up-border bg-white px-6 py-6 text-sm text-up-black/60 dark:border-white/15 dark:bg-white/5 dark:text-white/60">
-          Checking this job…
-        </div>
       ) : (
         <form
           className="rounded-lg border border-up-border bg-white px-6 py-6 dark:border-white/15 dark:bg-white/5"
@@ -582,6 +596,64 @@ function HighlightCheck({
       />
       {title}
     </label>
+  );
+}
+
+/**
+ * Invitation branch (plan 07b, D7.5): the shared `InvitationActions`
+ * panel inline — accept (binding, finalize on upwork.com) / decline without
+ * leaving the job. After a successful action the card summarizes instead of
+ * re-offering a stale action.
+ */
+function InvitedCard({
+  invitation,
+  orgUid,
+  live,
+  handled,
+  onDone,
+}: {
+  invitation: InvitationRow | null;
+  orgUid: string | null;
+  live: Set<string>;
+  handled: boolean;
+  onDone: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-up-teal/30 bg-up-surface-2 px-6 py-6 dark:border-up-lime/20 dark:bg-white/5">
+      <h2 className="text-lg font-semibold text-up-black dark:text-white">
+        This job reached you as an invitation
+      </h2>
+      <p className="mt-2 text-sm text-up-black/70 dark:text-white/70">
+        Invited jobs are accepted or declined, not applied to.
+        {invitation !== null && invitation.terms !== null && (
+          <> Terms offered: <span className="font-semibold">{invitation.terms}</span>.</>
+        )}
+      </p>
+      {handled ? (
+        <p className="mt-4 text-sm font-medium text-up-green-hc dark:text-up-lime">
+          Invitation handled — it will disappear from your list on the next refresh.
+        </p>
+      ) : (
+        <div className="mt-4">
+          <InvitationActions
+            invitation={
+              invitation !== null
+                ? { id: invitation.id, jobNumericId: invitation.jobNumericId, jobTitle: invitation.jobTitle }
+                : { id: null, jobNumericId: null, jobTitle: null }
+            }
+            orgUid={orgUid}
+            live={live}
+            onDone={onDone}
+          />
+        </div>
+      )}
+      <Link
+        to="/invitations"
+        className="mt-4 inline-block text-xs font-semibold text-up-teal underline dark:text-up-lime"
+      >
+        View all invitations
+      </Link>
+    </div>
   );
 }
 

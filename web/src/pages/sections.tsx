@@ -3,20 +3,10 @@ import { EmptyState } from '../components/EmptyState.js';
 
 /**
  * Placeholder sections (plan 05 layout). The tools console (plan 04) lives in
- * its own file (ToolsPage.tsx); the dashboard, jobs, proposals, and
- * proposal-draft pages are real pages since plans 06/07a; the remaining
- * data binding lands in plan 07 (07b-07d).
+ * its own file (ToolsPage.tsx); the dashboard, jobs, proposals, proposal-draft,
+ * and invitations/offers pages are real pages since plans 06/07a/07b; the
+ * remaining data binding lands in plan 07 (07c-07d).
  */
-
-export function InvitationsPage() {
-  return (
-    <EmptyState
-      title="Invitations & offers"
-      description="Your inbox of client invitations and offers — accept, decline, or ask for changes, with notices for steps that finish on upwork.com."
-      plan="plan 07"
-    />
-  );
-}
 
 export function MessagesPage() {
   return (

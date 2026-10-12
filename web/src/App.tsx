@@ -10,13 +10,8 @@ import { JobsPage } from './pages/JobsPage.js';
 import { JobDetailPage } from './pages/JobDetailPage.js';
 import { ProposalsPage } from './pages/ProposalsPage.js';
 import { ProposalDraftPage } from './pages/ProposalDraftPage.js';
-import {
-  ContractsPage,
-  InvitationsPage,
-  MessagesPage,
-  NotFoundPage,
-  ProfilePage,
-} from './pages/sections.js';
+import { InvitationsPage } from './pages/InvitationsPage.js';
+import { ContractsPage, MessagesPage, NotFoundPage, ProfilePage } from './pages/sections.js';
 
 export default function App() {
   return (
