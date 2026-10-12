@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { FeatureCard } from '../components/FeatureCard.js';
 import { NotConnectedCta } from '../components/NotConnectedCta.js';
@@ -6,7 +7,7 @@ import { useAccount } from '../context/account.js';
 import { useFeature } from '../hooks/useFeature.js';
 import { useToolList } from '../hooks/useToolList.js';
 import { useUpworkStatus } from '../hooks/useUpworkStatus.js';
-import { buildGetArgs, mapJobDetail } from '../lib/jobs.js';
+import { buildGetArgs, isPlaceholderJobKey, mapJobDetail } from '../lib/jobs.js';
 import { FEATURES, liveToolNames, resolveTool } from '../lib/registry.js';
 
 /**
@@ -21,13 +22,20 @@ export function JobDetailPage() {
   const { account, loading: accountLoading, error: accountError, refresh } = useAccount();
   const orgUid = account?.orgUid ?? null;
   const params = useParams<{ jobKey: string }>();
-  const jobKey = params.jobKey ?? '';
+  const jobKey = (params.jobKey ?? '').trim();
 
   const { tools, loading: toolsLoading } = useToolList(connected);
   const live = useMemo(() => liveToolNames(tools), [tools]);
+  // A search row with no recognizable reference arrives as a `row-<index>`
+  // placeholder key: it is not a valid `find_jobs get` id, so no call is made
+  // for it — the recovery card below takes over. `overrideKey` is a job
+  // reference the owner pasted (URL / numeric id / `~02…` ciphertext) after
+  // a failure; all three forms are valid `id` values.
+  const [overrideKey, setOverrideKey] = useState<string | null>(null);
+  const callKey = overrideKey ?? (isPlaceholderJobKey(jobKey) ? '' : jobKey);
   const args = useMemo(
-    () => (orgUid !== null && jobKey !== '' ? buildGetArgs(jobKey, orgUid) : null),
-    [orgUid, jobKey],
+    () => (orgUid !== null ? buildGetArgs(callKey, orgUid) : null),
+    [orgUid, callKey],
   );
   const { state, reload } = useFeature(
     FEATURES.jobGet,
@@ -72,8 +80,9 @@ export function JobDetailPage() {
       </div>
     );
   }
+  const placeholder = isPlaceholderJobKey(jobKey);
 
-  const detail = state.kind === 'ok' ? mapJobDetail(state.data, jobKey) : null;
+  const detail = state.kind === 'ok' ? mapJobDetail(state.data, callKey) : null;
 
   return (
     <div className="space-y-6">
@@ -81,13 +90,25 @@ export function JobDetailPage() {
         ← Back to jobs
       </Link>
 
+      {placeholder && overrideKey === null ? (
+        <JobKeyCard
+          title="Open this job"
+          body={
+            'This job listing did not include a reference Upwork can open (no job id, '
+            + 'ciphertext, or URL in the result). Paste the job URL from upwork.com — or the '
+            + 'numeric job id / ~02… ciphertext — to load its details.'
+          }
+          onSubmit={setOverrideKey}
+        />
+      ) : (
+        <>
       <FeatureCard
         title="Job details"
         state={state}
         tool={FEATURES.jobGet.tools[0]}
         onRetry={reload}
         render={(data) => {
-          const d = mapJobDetail(data, jobKey);
+          const d = mapJobDetail(data, callKey);
           if (d === null) {
             return <p className="text-sm text-up-black/60 dark:text-white/60">Job data not found in the result.</p>;
           }
@@ -174,14 +195,74 @@ export function JobDetailPage() {
         }}
       />
 
+      {state.kind === 'error' && (
+        <JobKeyCard
+          title="Try another job reference"
+          body={
+            'Upwork could not open this reference. If you have the job URL, the numeric job id, '
+            + 'or the ~02… ciphertext, the job can be loaded with that.'
+          }
+          onSubmit={(key) => {
+            setOverrideKey(key);
+          }}
+        />
+      )}
+      </>
+      )}
+
       {detail !== null && (
         <ApplyPanel
           applied={detail.applied}
-          jobKey={detail.jobKey ?? jobKey}
+          jobKey={detail.jobKey ?? callKey}
           title={detail.title}
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Paste-a-reference recovery (plan 10): `find_jobs` action `get` accepts a
+ * full Upwork job URL, a numeric job id, or a `~02…` ciphertext — so a value
+ * the owner pastes is always a valid `id` to retry with.
+ */
+function JobKeyCard({
+  title,
+  body,
+  onSubmit,
+}: {
+  title: string;
+  body: string;
+  onSubmit: (key: string) => void;
+}) {
+  const [value, setValue] = useState('');
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const key = value.trim();
+    if (key !== '') onSubmit(key);
+  };
+  return (
+    <section className="rounded-lg border border-up-border bg-white p-4 dark:border-white/15 dark:bg-white/5">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-up-black/50 dark:text-white/50">
+        {title}
+      </h2>
+      <p className="mt-2 text-sm text-up-black/70 dark:text-white/70">{body}</p>
+      <form onSubmit={submit} className="mt-3 flex flex-wrap items-center gap-2">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Job URL, numeric job id, or ~02… ciphertext"
+          aria-label="Job URL, numeric job id, or ciphertext"
+          className="min-w-52 flex-1 rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+        />
+        <button
+          type="submit"
+          className="rounded-md bg-up-green px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-up-green-dark"
+        >
+          Load job
+        </button>
+      </form>
+    </section>
   );
 }
 

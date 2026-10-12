@@ -4,6 +4,7 @@ import {
   buildSearchArgs,
   buildSmartArgs,
   EMPTY_FILTERS,
+  isPlaceholderJobKey,
   mapJobDetail,
   mapJobResult,
   type JobFilters,
@@ -82,6 +83,29 @@ describe('buildSmartArgs / buildGetArgs (plan 06)', () => {
       id: 'https://www.upwork.com/jobs/~02abc',
     });
   });
+
+  it('trims the key and returns null for empty/whitespace keys (no call without id)', () => {
+    expect(buildGetArgs('  ~02abc ', 'org-1')).toEqual({
+      action: 'get',
+      org_uid: 'org-1',
+      id: '~02abc',
+    });
+    expect(buildGetArgs('', 'org-1')).toBeNull();
+    expect(buildGetArgs('   ', 'org-1')).toBeNull();
+  });
+});
+
+describe('isPlaceholderJobKey (plan 10)', () => {
+  it('recognizes the row-N placeholder convention and nothing else', () => {
+    expect(isPlaceholderJobKey('row-0')).toBe(true);
+    expect(isPlaceholderJobKey('row-12')).toBe(true);
+    expect(isPlaceholderJobKey(' row-3 ')).toBe(true);
+    expect(isPlaceholderJobKey('~02abc')).toBe(false);
+    expect(isPlaceholderJobKey('123456789')).toBe(false);
+    expect(isPlaceholderJobKey('row-3/propose')).toBe(false);
+    expect(isPlaceholderJobKey('row-x')).toBe(false);
+    expect(isPlaceholderJobKey('')).toBe(false);
+  });
 });
 
 const SEARCH_RESULT = {
@@ -153,6 +177,20 @@ describe('mapJobResult (plan 06)', () => {
     const last = mapJobResult({ jobs: [{ title: 'x' }], has_more: false });
     expect(last.meta.nextPage).toBeNull();
     expect(last.meta.hasMore).toBe(false);
+  });
+
+  it('keeps rows with no recognizable reference under a row-N placeholder key (plan 10)', () => {
+    const res = mapJobResult({
+      jobs: [
+        { title: 'No reference anywhere', budget: 10 },
+        { job_title: 'Also no reference' },
+      ],
+    });
+    expect(res.rows).toHaveLength(2);
+    expect(res.rows[0]?.jobKey).toBe('row-0');
+    expect(res.rows[1]?.jobKey).toBe('row-1');
+    expect(res.rows[0]?.title).toBe('No reference anywhere');
+    expect(res.rows[1]?.title).toBe('Also no reference');
   });
 
   it('handles arrays at the top level and garbage gracefully', () => {

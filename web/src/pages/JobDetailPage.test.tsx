@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { fetchMock, jsonResponse, type FetchRoute } from '../test/fetchMock.js';
@@ -24,8 +24,15 @@ const DETAIL = {
   },
 };
 
-function renderDetail(applied = false, extra: Partial<Record<string, FetchRoute>> = {}) {
+const JOB_ERROR_TEXT = 'id is required (trace_id: 9db0f5ec6f565232368425a55c74b05b)';
+
+function renderDetail(
+  applied = false,
+  extra: Partial<Record<string, FetchRoute>> = {},
+  opts: { entry?: string; jobErrorFor?: string } = {},
+) {
   const calls: Array<Record<string, unknown>> = [];
+  const entry = opts.entry ?? '/jobs/~02abc';
   vi.stubGlobal(
     'fetch',
     fetchMock({
@@ -47,6 +54,13 @@ function renderDetail(applied = false, extra: Partial<Record<string, FetchRoute>
       '/api/tools/upwork__find_jobs/call': async (req) => {
         const parsed = JSON.parse(await req.text()) as { args: Record<string, unknown> };
         calls.push(parsed.args);
+        if (opts.jobErrorFor !== undefined && parsed.args.id === opts.jobErrorFor) {
+          return jsonResponse({
+            isError: true,
+            ms: 1,
+            content: [{ type: 'text', text: JOB_ERROR_TEXT }],
+          });
+        }
         return jsonResponse({
           isError: false,
           ms: 1,
@@ -60,7 +74,7 @@ function renderDetail(applied = false, extra: Partial<Record<string, FetchRoute>
   return {
     calls,
     view: render(
-      <MemoryRouter initialEntries={['/jobs/~02abc']}>
+      <MemoryRouter initialEntries={[entry]}>
         <AccountProvider>
           <Routes>
             <Route path="/jobs/:jobKey" element={<JobDetailPage />} />
@@ -100,5 +114,43 @@ describe('JobDetailPage (plan 06)', () => {
 
     expect(await screen.findByText(/You have already applied/)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Write proposal' })).toBeNull();
+  });
+
+  it('placeholder key (row-N): no get call, paste-a-reference recovery loads the job (plan 10)', async () => {
+    const { calls } = renderDetail(false, {}, { entry: '/jobs/row-3' });
+
+    expect(await screen.findByText('Open this job')).toBeInTheDocument();
+    expect(await screen.findByText(/Paste the job URL/)).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText('Job URL, numeric job id, or ciphertext'), {
+      target: { value: 'https://www.upwork.com/jobs/~02abc' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load job' }));
+
+    expect(await screen.findByText('Build a React dashboard')).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({
+      action: 'get',
+      org_uid: 'org-1',
+      id: 'https://www.upwork.com/jobs/~02abc',
+    });
+  });
+
+  it('tool error surfaces verbatim; paste recovery re-calls get with the pasted id (plan 10)', async () => {
+    const { calls } = renderDetail(false, {}, { jobErrorFor: '~02abc' });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(JOB_ERROR_TEXT);
+    expect(await screen.findByText('Try another job reference')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Job URL, numeric job id, or ciphertext'), {
+      target: { value: '12345' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load job' }));
+
+    expect(await screen.findByText('Build a React dashboard')).toBeInTheDocument();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toEqual({ action: 'get', org_uid: 'org-1', id: '12345' });
   });
 });

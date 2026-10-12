@@ -63,9 +63,23 @@ export function buildSmartArgs(
 /**
  * Build the `find_jobs` arguments for `action: 'get'`. `jobKey` accepts the
  * numeric id, the `~02…` ciphertext, or the full job URL (D6.1).
+ * Returns `null` for an empty key — callers must not send `get` without an id
+ * (Upwork answers `id is required` with a trace id, which is useless).
  */
-export function buildGetArgs(jobKey: string, orgUid: string): Record<string, unknown> {
-  return { action: 'get', org_uid: orgUid, id: jobKey };
+export function buildGetArgs(jobKey: string, orgUid: string): Record<string, unknown> | null {
+  const key = jobKey.trim();
+  if (key === '') return null;
+  return { action: 'get', org_uid: orgUid, id: key };
+}
+
+/**
+ * Placeholder keys are what `mapJobRow` emits for a search row that carries
+ * no recognizable job reference (`row-<index>`). They are valid DOM/route
+ * keys but are NOT acceptable `find_jobs get` ids — pages must not send
+ * them upstream and must offer the paste-a-reference recovery instead.
+ */
+export function isPlaceholderJobKey(key: string): boolean {
+  return /^row-\d+$/.test(key.trim());
 }
 
 function parseBudget(raw: string): number | null {
@@ -90,7 +104,12 @@ export interface JobMeta {
 export interface JobRow {
   /** Stable DOM key. */
   key: string;
-  /** What to pass to `find_jobs get` (ciphertext > numeric id > URL). */
+  /**
+   * What to pass to `find_jobs get` (ciphertext > numeric id > URL). When
+   * the live row carries no recognizable reference this is the `row-<index>`
+   * placeholder (`isPlaceholderJobKey`) — the detail page then offers the
+   * paste-a-reference recovery instead of calling Upwork.
+   */
   jobKey: string;
   url: string | null;
   title: string;
