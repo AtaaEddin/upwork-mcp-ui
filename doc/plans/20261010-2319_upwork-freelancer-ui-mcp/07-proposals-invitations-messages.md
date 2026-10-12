@@ -25,7 +25,7 @@ rule it is split into session-sized slices. Each slice lands independently green
 | Slice | Content | Status |
 |-------|---------|--------|
 | 07a | Proposals: list (status filter) + detail; proposal draft → review → confirm-submit (standard, non-invited application); shared write-action infra (confirm modal + toasts) | done |
-| 07b | Invitations & offers: inboxes, detail, accept / decline / ask-changes (invite + offer), `finalize_url` binding notices; invitation branch of the draft flow wired to the shared accept/decline | planned |
+| 07b | Invitations & offers: inboxes, detail, accept / decline / ask-changes (invite + offer), `finalize_url` binding notices; invitation branch of the draft flow wired to the shared accept/decline | done |
 | 07c | Messages: rooms + unread, thread view, composer, attachment upload/download (server streaming proxy + size caps) | planned |
 | 07d | Contracts (active/past, detail, milestones, work-diary best effort) + earnings + profile (read + MCP-supported updates) | planned |
 
@@ -98,6 +98,33 @@ form links the console until then); `FL_AGENCY` accounts skip `get_profile`
 read-only evidence (agency profile tools are a 07d read concern) — the flow
 itself works for any account that has the tools.
 
+### D7.6 — 07b shape (2026-10-11, sources: same official plugin skills + upwork.com/ai/mcp)
+- **One page, two tabs** (`?tab=invitations|offers`, default invitations): the list row
+  already carries the terms (the skill: "invitations are listed per job"), so the detail is an
+  **inline expansion of the row** (+ raw JSON) — no invented `get` action. The dashboard
+  "Open offers" card links to `?tab=offers`.
+- **Invitation actions** (`manage_proposals`, per write-proposal skill): `accept_invitation`
+  is **binding** (creates the contract) → expect `status: action_required` + `finalize_url`;
+  `decline_invitation` is reversible and runs direct. Params best-known (D7.2 pattern):
+  `job_id` (numeric, from the row's job ref) preferred, else `invitation_id`; `needs_details`
+  is the recovery loop.
+- **Offer actions** (`respond_to_offer`, per upwork-workflows skill): `accept` is **binding**
+  → `finalize_url`; `decline` and `request_changes` return a **preview** → second
+  `confirm_preview` step (D7.1). Params best-known: `offer_id` (plus numeric `job_id` when
+  the row carries one), `message` for request-changes.
+- **One defensive outcome parser for all write results** — `parseWriteOutcome()`:
+  `finalize_url` (or `status: action_required`) → done view with the upwork.com link;
+  else `preview_id` + `type` → second confirm step (works even if the server makes an
+  invitation action preview-confirm); else `needs_details` verbatim; else plain success.
+- **Shared flow** — `hooks/useWriteAction.ts` + thin `components/InvitationActions.tsx` /
+  `components/OfferActions.tsx`, all ConfirmModal-driven (D7.4). The draft page's invitation
+  branch (D7.5) renders `InvitationActions` inline — accept/decline without leaving the job.
+
+Sources (add to D7.1 set):
+- https://www.upwork.com/ai/mcp (capabilities: respond to invitations, review offers)
+- https://support.upwork.com/hc/en-us/articles/55446516654611 (offer response lifecycle:
+  accept → contract; request changes; decline; 7-day expiry)
+
 ## Acceptance
 - HTTP/service tests incl. draft-confirm guard (submit requires draft id), attachment caps,
   401 → re-auth banner trigger
@@ -129,3 +156,45 @@ itself works for any account that has the tools.
   verified proposal afterwards; applied + invited preflight notices; dark-class + horizontal
   overflow checks; no uncaught page errors. Screenshots in `$SHOT_DIR` (owner visual review).
 - Real-data check against a live Upwork account stays an owner action (same as plan 06, D6.4).
+
+### 07b (done 2026-10-11)
+- **Tests** (same change, through the HTTP surface):
+  - `lib/invitations.test.ts` — `mapInvitations`/`mapOffers` (bare array, named container, nested
+    job object, aliases, degraded rows, unknown shapes), `parseWriteOutcome` priority
+    (finalize > preview > needs_details > ok; a bare `id`+`type` is NOT a preview), arg builders
+    (numeric `job_id` preferred over `invitation_id`; `message` only for request-changes),
+  - `components/InvitationActions.test.tsx` — accept is binding (finalize link, list NOT
+    refreshed), decline direct (refresh, no confirm_preview), preview → second `confirm_preview`
+    step with `type`+`preview_id`, `needs_details` verbatim, `invitation_id` fallback,
+    missing-tool unavailability (no call made),
+  - `components/OfferActions.test.tsx` — accept binding + args, decline preview chain,
+    request-changes with/without message, `needs_details` verbatim,
+  - `pages/InvitationsPage.test.tsx` — default tab calls only `invitations` (offers feature
+    suspended while inactive), tab switch calls `list_mine`, row → inline detail + actions with
+    **zero extra tool calls**, binding accept shows finalize link without refreshing (the step
+    still finishes on upwork.com), direct decline refreshes the list, empty states per tab,
+    missing-tool degradation,
+  - `pages/ProposalDraftPage.test.tsx` (extended) — the invited branch now renders the shared
+    `InvitationActions` inline: accept → finalize link (args `{action, job_id, org_uid}`),
+    decline → "invitation handled" summary,
+  - `components/ConfirmModal.test.tsx` (extended) — regression: a reopened modal never shows
+    the previous outcome (see the fix below).
+- **Fix found in browser verification (real bug, not a test artifact)**: `ConfirmModal` kept
+  its `done`/`error` state while closed (it renders `null` but the instance survives, e.g. the
+  shared `OfferActions` panel reused across list rows). On reopen, React painted one frame with
+  the NEW title + the STALE done view before the reset effect landed; in a real browser that
+  stale overlay then swallowed the next clicks. Fix: reset the outcome state while CLOSED, so
+  the first render of any open is the clean confirm view.
+- **DoD**: typecheck clean; 93/93 server + 194/194 web tests (includes the in-flight job-detail
+  plan's tests); `eslint` clean for every 07b file — the 2 remaining repo lint errors are in
+  `web/scripts/browser-verify-job-detail.mjs`, an uncommitted file of the in-flight job-detail
+  recovery plan (not part of this slice; its owner lands the fix with that plan); build 0 warnings.
+- **Browser-verified** (`web/scripts/browser-verify-invitations.mjs`, system Chromium, built SPA
+  on a fake connected `/api` backend with mutable world state): 22 shots desktop+mobile ×
+  light+dark — invitations list → inline detail; binding accept (modal → "Finish on upwork.com"
+  with the exact `finalize_url` href) → simulated completion on upwork.com → invitation gone on
+  reload; direct decline → list refresh; offers tab; offer accept (binding); offer decline
+  (preview → second confirm dialog); request-changes with message → second confirm → "Changes
+  requested" status; dark-class + horizontal overflow checks; no uncaught page errors.
+  The 07a proposals script re-ran 15/15 green after the `ConfirmModal` fix (no regression).
+  Screenshots in `$SHOT_DIR` (owner visual review).
