@@ -400,7 +400,7 @@ export function ProposalDraftPage() {
               onChange={(e) => setCover(e.target.value)}
               rows={6}
               placeholder="Why you, specifically, are the right person for this job…"
-              className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+              className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
             />
           </Field>
 
@@ -418,7 +418,7 @@ export function ProposalDraftPage() {
                       value={answers[q] ?? ''}
                       onChange={(e) => setAnswers((prev) => ({ ...prev, [q]: e.target.value }))}
                       rows={2}
-                      className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+                      className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
                     />
                   </div>
                 ))}
@@ -435,7 +435,7 @@ export function ProposalDraftPage() {
                 step="0.01"
                 value={bid}
                 onChange={(e) => setBid(e.target.value)}
-                className="w-40 rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+                className="w-40 rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
               />
             </div>
             {bidNum === null && bid.trim() !== '' && (
@@ -889,7 +889,7 @@ function PreviewView({
         <summary className="cursor-pointer text-xs font-semibold text-up-teal dark:text-up-lime">
           Raw preview JSON
         </summary>
-        <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-surface-2 dark:text-white">
+        <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-black dark:text-white">
           {JSON.stringify(preview.raw, null, 2)}
         </pre>
       </details>

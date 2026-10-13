@@ -248,7 +248,7 @@ export function JobsPage() {
 }
 
 const inputCls =
-  'mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white dark:focus:border-up-green';
+  'mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white dark:focus:border-up-green';
 
 function FieldLabel({ children }: { children: string }) {
   return (

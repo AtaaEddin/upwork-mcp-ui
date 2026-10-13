@@ -104,7 +104,7 @@ export function DashboardPage() {
             <select
               value={account.orgUid}
               onChange={(e) => void select(e.target.value)}
-              className="rounded-md border border-up-border bg-white px-2 py-1.5 text-xs text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+              className="rounded-md border border-up-border bg-white px-2 py-1.5 text-xs text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
             >
               {accounts.map((a) => (
                 <option key={a.orgUid} value={a.orgUid}>

@@ -209,7 +209,7 @@ export function ToolsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by name or description…"
-          className="mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white dark:focus:border-up-green"
+          className="mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white dark:focus:border-up-green"
         />
       </label>
 
@@ -257,7 +257,7 @@ export function ToolsPage() {
               <summary className="cursor-pointer text-xs font-semibold text-up-teal dark:text-up-lime">
                 Input schema
               </summary>
-              <pre className="mt-2 overflow-x-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-surface-2 dark:text-white">
+              <pre className="mt-2 overflow-x-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-black dark:text-white">
                 {JSON.stringify(selectedTool.inputSchema, null, 2)}
               </pre>
             </details>
@@ -272,7 +272,7 @@ export function ToolsPage() {
               onChange={(e) => setArgsText(e.target.value)}
               rows={6}
               spellCheck={false}
-              className="mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 font-mono text-xs text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white dark:focus:border-up-green"
+              className="mt-1 w-full rounded-md border border-up-border bg-white px-3 py-2 font-mono text-xs text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white dark:focus:border-up-green"
             />
           </label>
 
@@ -309,7 +309,7 @@ export function ToolsPage() {
                 <span className="text-xs text-up-black/50 dark:text-white/50">{callState.outcome.ms} ms</span>
               </div>
               {extractText(callState.outcome.content) !== '' ? (
-                <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs whitespace-pre-wrap text-up-black dark:bg-up-surface-2 dark:text-white">
+                <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs whitespace-pre-wrap text-up-black dark:bg-up-black dark:text-white">
                   {extractText(callState.outcome.content)}
                 </pre>
               ) : (
@@ -319,7 +319,7 @@ export function ToolsPage() {
                 <summary className="cursor-pointer text-xs font-semibold text-up-teal dark:text-up-lime">
                   Raw result JSON
                 </summary>
-                <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-surface-2 dark:text-white">
+                <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-black dark:text-white">
                   {JSON.stringify(callState.outcome, null, 2)}
                 </pre>
               </details>

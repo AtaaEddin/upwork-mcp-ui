@@ -115,7 +115,7 @@ export function ProposalsPage() {
               setStatusFilter(e.target.value);
               setSelectedId(null);
             }}
-            className="mt-1 block w-full min-w-56 rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+            className="mt-1 block w-full min-w-56 rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
           >
             {PROPOSAL_STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -310,7 +310,7 @@ function ProposalDetail({ d }: { d: ProposalDetailData }) {
         <summary className="cursor-pointer text-xs font-semibold text-up-teal dark:text-up-lime">
           Raw result JSON
         </summary>
-        <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-surface-2 dark:text-white">
+        <pre className="mt-2 max-h-80 overflow-auto rounded-md bg-up-surface p-3 text-xs text-up-black dark:bg-up-black dark:text-white">
           {JSON.stringify(d.raw, null, 2)}
         </pre>
       </details>

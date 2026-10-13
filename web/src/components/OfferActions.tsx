@@ -153,7 +153,7 @@ export function OfferActions({ offer, orgUid, live, onDone }: OfferActionsProps)
                     onChange={(e) => setMessage(e.target.value)}
                     rows={3}
                     placeholder="e.g. I can take this on at $55/h…"
-                    className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-surface-2 dark:text-white"
+                    className="w-full rounded-md border border-up-border bg-white px-3 py-2 text-sm text-up-black outline-none focus:border-up-green dark:border-white/15 dark:bg-up-black dark:text-white"
                   />
                 </label>
                 <p className="mt-2 text-xs text-up-black/60 dark:text-white/60">

@@ -100,6 +100,18 @@ describe('JobsPage (plan 06)', () => {
     expect(screen.getByText('Search results')).toBeInTheDocument();
   });
 
+  it('keeps form field backgrounds dark in the dark theme', async () => {
+    renderPage();
+    const keyword = await screen.findByPlaceholderText(/react, typescript/i);
+    const jobType = screen.getByRole('combobox');
+    // Regression: the dark background must be a dark token. A light token
+    // (e.g. `dark:bg-up-surface-2` = #f2f7f2) left the fields white in dark mode.
+    for (const el of [keyword, jobType]) {
+      expect(el.className).toContain('dark:bg-up-black');
+      expect(el.className).not.toContain('dark:bg-up-surface');
+    }
+  });
+
   it('follows pagination by echoing the returned values', async () => {
     renderPage();
     await screen.findByText('First job');
