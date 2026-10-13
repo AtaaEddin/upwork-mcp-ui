@@ -120,3 +120,23 @@ done: 2026-10-11
   defensively — 404/500/unknown shapes render as `unknown`, never as a false banner;
   `expiresAt`/`accountSummary` are parsed but only displayed once plan 04/06 surfaces
   them. The banner's Reconnect button is a top-level form POST — endpoint must 3xx-redirect.
+
+## Post-completion fix — dark-mode form field backgrounds (2026-10-13)
+
+Owner-reported: input fields did not flip their background from white in the dark
+theme. Root cause: 17 elements used `dark:bg-up-surface-2` as the dark-mode
+background, but `--color-up-surface-2` is a **light** token (`#f2f7f2`), so inputs,
+selects, textareas and `<pre>` blocks stayed white in dark mode. Fix: replaced with
+`dark:bg-up-black` (`#181818`) — the pattern already used by the proposal rate
+input (the one field written correctly). Affected: jobs filter fields
+(`inputCls`, 4 inputs + 1 select), job-search input, proposals status select,
+dashboard range select, offer message textarea, cover-letter + screening-question
+textareas, bid input, tools search input + tool-call JSON textarea, and the
+`<pre>` code blocks on jobs/detail/proposals/tools/invitations pages.
+
+Regression test in `web/src/pages/JobsPage.test.tsx` pins the dark token
+(`dark:bg-up-black` present, no `dark:bg-up-surface*` class) on the filter fields.
+Browser-verified on the production build (Chromium headless, connected state
+stubbed via request interception): computed input background light
+`rgb(255,255,255)` / dark `rgb(24,24,24)` at 1440px and 375px. 195/195 tests,
+build/lint/typecheck clean.
